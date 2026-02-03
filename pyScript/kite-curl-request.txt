@@ -1,0 +1,14 @@
+curl 'https://kite.zerodha.com/oms/instruments/historical/256265/minute?user_id=PS3609&oi=1&from=2025-12-01&to=2026-01-30' \
+  -H 'accept: */*' \
+  -H 'accept-language: en-US,en;q=0.9' \
+  -H 'authorization: enctoken z3i+qD+M0WqQ/2Q5dEEp/j2fr1ydb6rM7NGjm5LO7xQJ57zzj2tl9s7sJaEkg9ukKZU1JCNNMWCMGFdQT9jBmQvqSl5dy3s8QNDDkGMJ+fxr82wHtXsRWw==' \
+  -b 'kf_session=OFS770Tt9gIx8Q0W5TZfrDf9QVsTmT4n; _cfuvid=y4qNZBS1XxOja8EMpQYqys.7Nx5xVgUi._rnIdlYOMs-1769770638536-0.0.1.1-604800000; __cf_bm=2bwZTHkdQBz3vFo_mxjW99jbX5cZUhdjgVp_xTaAMpk-1769776246-1.0.1.1-oUbPz9x2599NXRg3ucA4qk0t7i_ljSs5tYEH8MYO30F3tKvOWUXys_dW53Uq.KCv9gN9EBe4nnBcj29vBs4ll.aTSjDrNzNSa1LdL3Kp.bs; user_id=PS3609; public_token=UUf6WgkooE4OkvQ3ZoiyD1yV91M57dqt; enctoken=z3i+qD+M0WqQ/2Q5dEEp/j2fr1ydb6rM7NGjm5LO7xQJ57zzj2tl9s7sJaEkg9ukKZU1JCNNMWCMGFdQT9jBmQvqSl5dy3s8QNDDkGMJ+fxr82wHtXsRWw==' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://kite.zerodha.com/static/chart/chartiq/chart.html?v=3.6.82' \
+  -H 'sec-ch-ua: "Not(A:Brand";v="8", "Chromium";v="144", "Google Chrome";v="144"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "Windows"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: same-origin' \
+  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36'
