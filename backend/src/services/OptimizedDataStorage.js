@@ -116,7 +116,7 @@ class OptimizedDataStorage {
             };
 
             // Single insert per second instead of multiple per second
-            await this.db.collection('computed_data').insertOne(dataToStore);
+            await this.db.storeComputedData(dataToStore);
 
             // Optional: Log storage stats periodically
             if (Date.now() % 60000 < 1000) { // Every minute

@@ -5,8 +5,8 @@
  */
 
 class ATMStrikeManager {
-    constructor(xtsService, db) {
-        this.xtsService = xtsService;
+    constructor(zerodhaService, db) {
+        this.zerodhaService = zerodhaService;
         this.db = db;
         this.currentATMStrike = null;
         this.strikeThreshold = 25; // Half of strike interval (50/2)
@@ -81,7 +81,7 @@ class ATMStrikeManager {
         console.log(`📤 Unsubscribing from old options: ${oldInstruments.join(', ')}`);
 
         try {
-            await this.xtsService.unsubscribe(oldInstruments);
+            await this.zerodhaService.unsubscribe(oldInstruments);
         } catch (error) {
             console.error('Error unsubscribing old options:', error);
         }
@@ -102,7 +102,7 @@ class ATMStrikeManager {
         console.log(`📥 Subscribing to new options: ${newInstruments.join(', ')}`);
 
         try {
-            await this.xtsService.subscribe(newInstruments);
+            await this.zerodhaService.subscribe(newInstruments);
         } catch (error) {
             console.error('Error subscribing to new options:', error);
         }
@@ -115,20 +115,9 @@ class ATMStrikeManager {
      * @param {number} spotPrice - Current spot price
      */
     async logStrikeChange(oldStrike, newStrike, spotPrice) {
-        const logEntry = {
-            timestamp: new Date(),
-            event: 'ATM_STRIKE_CHANGE',
-            oldStrike: oldStrike,
-            newStrike: newStrike,
-            spotPrice: spotPrice,
-            reason: 'SPOT_MOVEMENT',
-            threshold: this.strikeThreshold,
-            distance: Math.abs(spotPrice - (oldStrike || newStrike))
-        };
-
         try {
             // Store in database for audit
-            await this.db.collection('strike_changes').insertOne(logEntry);
+            await this.db.logStrikeChange(oldStrike, newStrike, spotPrice, 'SPOT_MOVEMENT');
             console.log('Strike change logged to database');
         } catch (error) {
             console.error('Error logging strike change:', error);

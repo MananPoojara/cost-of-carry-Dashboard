@@ -5,8 +5,8 @@
  */
 
 class ExpiryManager {
-    constructor(xtsService, db) {
-        this.xtsService = xtsService;
+    constructor(zerodhaService, db) {
+        this.zerodhaService = zerodhaService;
         this.db = db;
         this.weeklyExpiry = null;
         this.monthlyExpiry = null;
@@ -293,17 +293,8 @@ class ExpiryManager {
      * @param {Object} newExpiryData - New expiry data
      */
     async logExpirySwitch(type, oldExpiry, newExpiryData) {
-        const logEntry = {
-            timestamp: new Date(),
-            event: 'EXPIRY_SWITCH',
-            type: type,
-            oldExpiry: oldExpiry,
-            newExpiry: newExpiryData.expiryDate,
-            instruments: newExpiryData.instruments
-        };
-
         try {
-            await this.db.collection('expiry_changes').insertOne(logEntry);
+            await this.db.logExpiryChange(type, oldExpiry, newExpiryData.expiryDate, 'Auto rollover');
             console.log(`${type} expiry switch logged to database`);
         } catch (error) {
             console.error(`Error logging ${type} expiry switch:`, error);

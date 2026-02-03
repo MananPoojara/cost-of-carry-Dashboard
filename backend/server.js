@@ -8,7 +8,6 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
-const mongoose = require('mongoose');
 
 // Import production-grade services
 const ATMStrikeManager = require('./src/services/ATMStrikeManager');
@@ -30,7 +29,7 @@ class NiftySyntheticServer {
         });
 
         // Core services
-        this.db = null;
+        this.dbService = null;
         this.zerodhaService = null;
         this.atmStrikeManager = null;
         this.expiryManager = null;
@@ -74,7 +73,7 @@ class NiftySyntheticServer {
                 timestamp: new Date().toISOString(),
                 uptime: process.uptime(),
                 services: {
-                    database: this.db?.readyState === 1,
+                    database: this.dbService?.isConnected || false,
                     zerodhaService: !!this.zerodhaService,
                     atmStrikeManager: !!this.atmStrikeManager,
                     expiryManager: !!this.expiryManager,
@@ -118,24 +117,10 @@ class NiftySyntheticServer {
         this.app.get('/api/historical', async (req, res) => {
             try {
                 const { startDate, endDate, limit = 1000 } = req.query;
-
-                const query = {};
-                if (startDate || endDate) {
-                    query.timestamp = {};
-                    if (startDate) query.timestamp.$gte = new Date(startDate);
-                    if (endDate) query.timestamp.$lte = new Date(endDate);
-                }
-
-                const data = await this.db.collection('computed_data')
-                    .find(query)
-                    .sort({ timestamp: -1 })
-                    .limit(parseInt(limit))
-                    .toArray();
-
+                const data = await this.dbService.getHistoricalComputedData(startDate, endDate, limit);
                 res.json({
                     data: data,
-                    count: data.length,
-                    query: query
+                    count: data.length
                 });
             } catch (error) {
                 console.error('Error fetching historical data:', error);
@@ -244,29 +229,9 @@ class NiftySyntheticServer {
      * Initialize database connection
      */
     async initializeDatabase() {
-        try {
-            const { Pool } = require('pg');
-
-            const dbConfig = {
-                connectionString: process.env.DATABASE_URL || 'postgresql://seasonality:seasonality123@localhost:5432/seasonality',
-                max: 20,
-                idleTimeoutMillis: 30000,
-                connectionTimeoutMillis: 2000,
-            };
-
-            this.db = new Pool(dbConfig);
-
-            // Test connection
-            const client = await this.db.connect();
-            await client.query('SELECT NOW()');
-            client.release();
-
-            console.log('✅ PostgreSQL database connected successfully');
-            return true;
-        } catch (error) {
-            console.error('❌ Database connection failed:', error);
-            return false;
-        }
+        const DatabaseService = require('./src/services/DatabaseService');
+        this.dbService = new DatabaseService();
+        return await this.dbService.initialize();
     }
 
     /**
@@ -302,31 +267,37 @@ class NiftySyntheticServer {
     async initializeServices() {
         try {
             // Initialize Zerodha Service
-            this.zerodhaService = new ZerodhaService(this.db);
-            console.log('✅ Zerodha Service initialized');
+            this.zerodhaService = new ZerodhaService(this.dbService);
+            const zerodhaInitialized = await this.zerodhaService.initialize();
+            
+            if (zerodhaInitialized) {
+                console.log('Zerodha Service initialized and connected');
+            } else {
+                console.log('Zerodha Service initialization failed - check pyScript/kite-curl-request.txt');
+            }
 
             // Initialize Spread Analyzer
             this.spreadAnalyzer = new SpreadAnalyzer();
-            console.log('✅ Spread Analyzer initialized');
+            console.log('Spread Analyzer initialized');
 
             // Initialize ATM Strike Manager with Zerodha service
-            this.atmStrikeManager = new ATMStrikeManager(this.zerodhaService, this.db);
-            console.log('✅ ATM Strike Manager initialized');
+            this.atmStrikeManager = new ATMStrikeManager(this.zerodhaService, this.dbService);
+            console.log('ATM Strike Manager initialized');
 
             // Initialize Expiry Manager with Zerodha service
-            this.expiryManager = new ExpiryManager(this.zerodhaService, this.db);
+            this.expiryManager = new ExpiryManager(this.zerodhaService, this.dbService);
             this.expiryManager.startExpiryMonitoring();
-            console.log('✅ Expiry Manager initialized');
+            console.log('Expiry Manager initialized');
 
             // Initialize Optimized Data Storage
-            this.dataStorage = new OptimizedDataStorage(this.db, this.io);
+            this.dataStorage = new OptimizedDataStorage(this.dbService, this.io);
             this.dataStorage.initialize(this.atmStrikeManager, this.spreadAnalyzer);
-            console.log('✅ Optimized Data Storage initialized');
+            console.log('Optimized Data Storage initialized');
 
             // Initialize Connection Manager
             this.connectionManager = new ConnectionManager(this.io);
             this.connectionManager.initialize(this.zerodhaService, this.atmStrikeManager);
-            console.log('✅ Connection Manager initialized');
+            console.log('Connection Manager initialized');
 
             // Set initial expiries
             const nextWeekly = new Date();
@@ -340,10 +311,10 @@ class NiftySyntheticServer {
             await this.atmStrikeManager.initialize(21400);
 
             this.isInitialized = true;
-            console.log('🚀 All services initialized successfully');
+            console.log('All services initialized successfully');
 
         } catch (error) {
-            console.error('❌ Error initializing services:', error);
+            console.error('Error initializing services:', error);
             throw error;
         }
     }
@@ -352,7 +323,7 @@ class NiftySyntheticServer {
      * Start mock data simulation (for development/testing)
      */
     startMockDataSimulation() {
-        console.log('🎭 Starting mock data simulation...');
+        console.log('Starting mock data simulation...');
 
         let spotPrice = 21400;
         let weeklyCallPrice = 150;
@@ -432,7 +403,7 @@ class NiftySyntheticServer {
 
         }, 1000); // Every second
 
-        console.log('✅ Mock data simulation started');
+        console.log('Mock data simulation started');
     }
 
     /**
@@ -451,13 +422,13 @@ class NiftySyntheticServer {
             // Initialize all services
             await this.initializeServices();
 
-            // Start mock data simulation only if XTS is not connected
-            const xtsStatus = this.xtsService?.getStatus();
-            if (process.env.NODE_ENV !== 'production' && !xtsStatus?.isConnected) {
-                console.log('⚠️ XTS not connected, starting mock data simulation...');
+            // Start mock data simulation if Zerodha is not connected
+            const zerodhaStatus = this.zerodhaService?.getStatus();
+            if (process.env.NODE_ENV !== 'production' && !zerodhaStatus?.isConnected) {
+                console.log('⚠️ Zerodha not connected, starting mock data simulation...');
                 this.startMockDataSimulation();
-            } else if (xtsStatus?.isConnected) {
-                console.log('✅ XTS connected, using real market data');
+            } else if (zerodhaStatus?.isConnected) {
+                console.log('✅ Zerodha connected, using real market data');
             }
 
             // Start server
@@ -466,7 +437,7 @@ class NiftySyntheticServer {
                 console.log(`🌟 Server running on port ${port}`);
                 console.log(`📊 Dashboard: http://localhost:${port}`);
                 console.log(`🔌 WebSocket: ws://localhost:${port}`);
-                console.log(`💾 Database: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/nifty-synthetic'}`);
+                console.log(`💾 Database: ${process.env.DATABASE_URL || 'postgresql://postgres:postgres123@localhost:5433/cost_of_carry_db'}`);
                 console.log('✅ All systems operational');
             });
 
@@ -490,7 +461,7 @@ class NiftySyntheticServer {
             this.dataStorage?.stopStorage();
 
             // Close database connection
-            await mongoose.connection.close();
+            await this.dbService?.close();
 
             // Close server
             this.server.close(() => {

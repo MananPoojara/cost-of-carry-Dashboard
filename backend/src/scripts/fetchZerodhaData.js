@@ -6,21 +6,16 @@
  * Usage: node fetchZerodhaData.js [exchange]
  */
 
-require('dotenv').config();
-const { Pool } = require('pg');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+const DatabaseService = require('../services/DatabaseService');
 const ZerodhaService = require('../services/ZerodhaService');
 
 class ZerodhaDataFetcher {
     constructor() {
-        // Database connection
-        this.db = new Pool({
-            connectionString: process.env.DATABASE_URL || 'postgresql://seasonality:seasonality123@localhost:5432/seasonality',
-            max: 20,
-            idleTimeoutMillis: 30000,
-            connectionTimeoutMillis: 2000,
-        });
-
-        this.zerodhaService = new ZerodhaService(this.db);
+        // Database service
+        this.dbService = new DatabaseService();
+        this.zerodhaService = new ZerodhaService(this.dbService);
         this.exchanges = ['NSE', 'NFO', 'BSE', 'BFO', 'CDS', 'MCX'];
     }
 
@@ -31,11 +26,11 @@ class ZerodhaDataFetcher {
         try {
             console.log('🚀 Initializing Zerodha Data Fetcher...');
 
-            // Test database connection
-            const client = await this.db.connect();
-            await client.query('SELECT NOW()');
-            client.release();
-            console.log('✅ Database connected');
+            // Initialize database service
+            const dbInitialized = await this.dbService.initialize();
+            if (!dbInitialized) {
+                throw new Error('Database initialization failed');
+            }
 
             // Load connection constants
             const loaded = await this.zerodhaService.loadConnectionConstants();
@@ -106,52 +101,8 @@ class ZerodhaDataFetcher {
     async showStatistics() {
         try {
             console.log('\n📊 Database Statistics:');
-
-            // Instruments count
-            const instrumentsResult = await this.db.query(`
-                SELECT exchange, COUNT(*) as count 
-                FROM instruments 
-                GROUP BY exchange 
-                ORDER BY exchange
-            `);
-
-            console.log('\n📋 Instruments:');
-            instrumentsResult.rows.forEach(row => {
-                console.log(`   ${row.exchange}: ${row.count} instruments`);
-            });
-
-            // Market data count
-            const dataResult = await this.db.query(`
-                SELECT exchange, COUNT(*) as count, 
-                       MIN(datetime) as earliest, 
-                       MAX(datetime) as latest
-                FROM market_data 
-                GROUP BY exchange 
-                ORDER BY exchange
-            `);
-
-            console.log('\n📈 Market Data:');
-            dataResult.rows.forEach(row => {
-                const earliest = new Date(row.earliest).toISOString().split('T')[0];
-                const latest = new Date(row.latest).toISOString().split('T')[0];
-                console.log(`   ${row.exchange}: ${row.count} records (${earliest} to ${latest})`);
-            });
-
-            // Recent activity
-            const recentResult = await this.db.query(`
-                SELECT ticker, MAX(datetime) as last_update
-                FROM market_data 
-                GROUP BY ticker 
-                ORDER BY last_update DESC 
-                LIMIT 10
-            `);
-
-            console.log('\n🕒 Recent Updates:');
-            recentResult.rows.forEach(row => {
-                const lastUpdate = new Date(row.last_update).toISOString().replace('T', ' ').split('.')[0];
-                console.log(`   ${row.ticker}: ${lastUpdate}`);
-            });
-
+            const stats = await this.dbService.getStatistics();
+            console.log(JSON.stringify(stats, null, 2));
         } catch (error) {
             console.error('❌ Error showing statistics:', error);
         }
@@ -170,7 +121,7 @@ class ZerodhaDataFetcher {
         const question = (prompt) => new Promise(resolve => rl.question(prompt, resolve));
 
         console.log('\n' + '='.repeat(50));
-        console.log('🚀 Zerodha Data Fetcher');
+        console.log('Zerodha Data Fetcher');
         console.log('='.repeat(50));
         console.log('1. Update instrument master');
         console.log('2. Download NSE data');
@@ -216,10 +167,10 @@ class ZerodhaDataFetcher {
                 await this.showStatistics();
                 break;
             case '0':
-                console.log('👋 Goodbye!');
+                console.log('Goodbye!');
                 return;
             default:
-                console.log('❌ Invalid choice');
+                console.log('Invalid choice');
         }
 
         // Show menu again
@@ -231,10 +182,10 @@ class ZerodhaDataFetcher {
      */
     async cleanup() {
         try {
-            await this.db.end();
-            console.log('✅ Database connection closed');
+            await this.dbService.close();
+            console.log('Database connection closed');
         } catch (error) {
-            console.error('❌ Error during cleanup:', error);
+            console.error('Error during cleanup:', error);
         }
     }
 }
@@ -245,7 +196,7 @@ async function main() {
 
     // Handle graceful shutdown
     process.on('SIGINT', async () => {
-        console.log('\n🛑 Shutting down...');
+        console.log('\n Shutting down...');
         await fetcher.cleanup();
         process.exit(0);
     });
@@ -280,14 +231,14 @@ async function main() {
                     if (fetcher.exchanges.includes(command.toUpperCase())) {
                         await fetcher.downloadExchangeData(command.toUpperCase());
                     } else {
-                        console.log('❌ Invalid command');
+                        console.log('Invalid command');
                         console.log('Usage: node fetchZerodhaData.js [update|stats|all|nse|nfo|bse|bfo|cds|mcx]');
                     }
             }
         }
 
     } catch (error) {
-        console.error('❌ Fatal error:', error);
+        console.error('Fatal error:', error);
         process.exit(1);
     } finally {
         await fetcher.cleanup();

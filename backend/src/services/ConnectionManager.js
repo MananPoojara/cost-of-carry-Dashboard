@@ -12,7 +12,7 @@ class ConnectionManager {
         this.maxReconnectAttempts = 10;
         this.reconnectInterval = 5000; // 5 seconds base interval
         this.subscribers = [];
-        this.xtsWebSocket = null;
+        this.zerodhaService = null;
         this.atmStrikeManager = null;
         this.lastConnectionTime = null;
         this.connectionStats = {
@@ -26,84 +26,45 @@ class ConnectionManager {
 
     /**
      * Initialize connection manager with dependencies
-     * @param {Object} xtsWebSocket - XTS WebSocket service
+     * @param {Object} zerodhaService - Zerodha service
      * @param {Object} atmStrikeManager - ATM Strike Manager
      */
-    initialize(xtsWebSocket, atmStrikeManager) {
-        this.xtsWebSocket = xtsWebSocket;
+    initialize(zerodhaService, atmStrikeManager) {
+        this.zerodhaService = zerodhaService;
         this.atmStrikeManager = atmStrikeManager;
         this.setupConnectionHandlers();
         console.log('Connection Manager initialized');
     }
 
     /**
-     * Setup WebSocket connection event handlers
+     * Setup connection event handlers
      */
     setupConnectionHandlers() {
-        if (!this.xtsWebSocket) {
-            console.error('XTS WebSocket not provided to Connection Manager');
+        if (!this.zerodhaService) {
+            console.error('Zerodha service not provided to Connection Manager');
             return;
         }
 
-        // Check if this is an XTS service (has different method names)
-        if (typeof this.xtsWebSocket.onData === 'function') {
-            // This is our XTS service, not a raw WebSocket
-            console.log('Setting up XTS service event handlers');
-
-            // Subscribe to XTS service status changes
-            this.xtsWebSocket.onConnectionChange = (status) => {
-                switch (status) {
-                    case 'CONNECTED':
-                        this.handleConnect();
-                        break;
-                    case 'DISCONNECTED':
-                        this.handleDisconnect('XTS disconnected');
-                        break;
-                    case 'ERROR':
-                        this.handleError(new Error('XTS connection error'));
-                        break;
-                }
-            };
-
-            // Monitor XTS connection status
-            this.monitorXTSConnection();
-
-        } else {
-            // This is a regular WebSocket
-            this.xtsWebSocket.on('connect', () => {
-                this.handleConnect();
-            });
-
-            this.xtsWebSocket.on('disconnect', (reason) => {
-                this.handleDisconnect(reason);
-            });
-
-            this.xtsWebSocket.on('reconnecting', (attemptNumber) => {
-                this.handleReconnecting(attemptNumber);
-            });
-
-            this.xtsWebSocket.on('error', (error) => {
-                this.handleError(error);
-            });
-        }
+        // Monitor Zerodha connection status
+        this.monitorZerodhaConnection();
 
         console.log('Connection event handlers setup complete');
     }
 
     /**
-     * Monitor XTS connection status periodically
+     * Monitor Zerodha connection status periodically
      */
-    monitorXTSConnection() {
+    monitorZerodhaConnection() {
         setInterval(() => {
-            if (this.xtsWebSocket && typeof this.xtsWebSocket.getStatus === 'function') {
-                const xtsStatus = this.xtsWebSocket.getStatus();
-                const newStatus = xtsStatus.isConnected ? 'LIVE' : 'DISCONNECTED';
+            if (this.zerodhaService && typeof this.zerodhaService.getStatus === 'function') {
+                const status = this.zerodhaService.getStatus();
+                const newStatus = status.isConnected ? 'LIVE' : 'DISCONNECTED';
 
                 if (newStatus !== this.status) {
                     if (newStatus === 'LIVE') {
                         this.handleConnect();
                     } else {
-                        this.handleDisconnect('XTS connection lost');
+                        this.handleDisconnect('Zerodha disconnected');
                     }
                 }
             }
@@ -251,8 +212,8 @@ class ConnectionManager {
             console.log('Resubscribing to instruments:', instruments);
 
             try {
-                // Resubscribe through XTS service
-                await this.xtsWebSocket.subscribe(instruments);
+                // Resubscribe through Zerodha service
+                await this.zerodhaService.subscribe(instruments);
                 console.log('Resubscription successful');
             } catch (error) {
                 console.error('Error during resubscription:', error);
@@ -427,9 +388,9 @@ class ConnectionManager {
         this.reconnectAttempts = 0;
         this.status = 'RECONNECTING';
         this.notifyStatusChange();
-        this.xtsWebSocket?.disconnect();
+        this.zerodhaService?.disconnect();
         setTimeout(() => {
-            this.xtsWebSocket?.connect();
+            this.zerodhaService?.initialize();
         }, 1000);
     }
 

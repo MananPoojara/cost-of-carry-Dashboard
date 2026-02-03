@@ -267,14 +267,14 @@ class CostOfCarryServer {
             const dbConnected = await this.databaseService.initialize();
 
             if (dbConnected) {
-                console.log('✅ PostgreSQL database connected successfully');
+                console.log('PostgreSQL database connected successfully');
                 return true;
             } else {
-                console.log('❌ PostgreSQL database connection failed');
+                console.log('PostgreSQL database connection failed');
                 return false;
             }
         } catch (error) {
-            console.error('❌ Database initialization failed:', error);
+            console.error('Database initialization failed:', error);
             return false;
         }
     }
@@ -287,30 +287,30 @@ class CostOfCarryServer {
             // Initialize Zerodha Service first
             this.zerodhaService = new ZerodhaService();
             const zerodhaConnected = await this.zerodhaService.initialize();
-            console.log(`✅ Zerodha Service initialized (${zerodhaConnected ? 'LIVE' : 'MOCK'} mode)`);
+            console.log(`Zerodha Service initialized (${zerodhaConnected ? 'LIVE' : 'MOCK'} mode)`);
 
             // Initialize Spread Analyzer
             this.spreadAnalyzer = new SpreadAnalyzer();
-            console.log('✅ Spread Analyzer initialized');
+            console.log('Spread Analyzer initialized');
 
             // Initialize ATM Strike Manager with Zerodha service
             this.atmStrikeManager = new ATMStrikeManager(this.zerodhaService, this.databaseService);
-            console.log('✅ ATM Strike Manager initialized');
+            console.log('ATM Strike Manager initialized');
 
             // Initialize Expiry Manager with Zerodha service
             this.expiryManager = new ExpiryManager(this.zerodhaService, this.databaseService);
             this.expiryManager.startExpiryMonitoring();
-            console.log('✅ Expiry Manager initialized');
+            console.log('Expiry Manager initialized');
 
             // Initialize Optimized Data Storage with database
             this.dataStorage = new OptimizedDataStorage(this.databaseService, this.io);
             this.dataStorage.initialize(this.atmStrikeManager, this.spreadAnalyzer);
-            console.log('✅ Optimized Data Storage initialized');
+            console.log('Optimized Data Storage initialized');
 
             // Initialize Connection Manager with Zerodha WebSocket
             this.connectionManager = new ConnectionManager(this.io);
             this.connectionManager.initialize(this.zerodhaService, this.atmStrikeManager);
-            console.log('✅ Connection Manager initialized');
+            console.log('Connection Manager initialized');
 
             // Set initial expiries (in production, fetch from Zerodha)
             const nextWeekly = new Date();
@@ -331,19 +331,19 @@ class CostOfCarryServer {
                     // Process for real-time calculations
                     this.dataStorage.processTick(tickData);
                 });
-                console.log('✅ Zerodha data pipeline connected');
+                console.log('Zerodha data pipeline connected');
 
                 // Subscribe to required instruments
                 const instruments = ['NIFTY_SPOT', 'WEEKLY_CALL', 'WEEKLY_PUT', 'MONTHLY_CALL', 'MONTHLY_PUT'];
                 await this.zerodhaService.subscribe(instruments);
-                console.log('✅ Subscribed to market data instruments');
+                console.log('Subscribed to market data instruments');
             }
 
             this.isInitialized = true;
-            console.log('🚀 All services initialized successfully');
+            console.log('All services initialized successfully');
 
         } catch (error) {
-            console.error('❌ Error initializing services:', error);
+            console.error('Error initializing services:', error);
             throw error;
         }
     }
@@ -352,7 +352,7 @@ class CostOfCarryServer {
      * Start mock data simulation (for development/testing)
      */
     startMockDataSimulation() {
-        console.log('🎭 Starting mock data simulation...');
+        console.log('Starting mock data simulation...');
 
         let spotPrice = 21400;
         let weeklyCallPrice = 150;
@@ -433,7 +433,7 @@ class CostOfCarryServer {
 
         }, 1000); // Every second
 
-        console.log('✅ Mock data simulation started');
+        console.log('Mock data simulation started');
     }
 
     /**
@@ -441,7 +441,7 @@ class CostOfCarryServer {
      */
     async start() {
         try {
-            console.log('🚀 Starting Cost of Carry Dashboard Server...');
+            console.log('Starting Cost of Carry Dashboard Server...');
 
             // Initialize database
             const dbConnected = await this.initializeDatabase();
@@ -455,24 +455,24 @@ class CostOfCarryServer {
             // Start mock data simulation only if Zerodha is not connected
             const zerodhaStatus = this.zerodhaService?.getStatus();
             if (process.env.NODE_ENV !== 'production' && !zerodhaStatus?.isConnected) {
-                console.log('⚠️ Zerodha not connected, starting mock data simulation...');
+                console.log('Zerodha not connected, starting mock data simulation...');
                 this.startMockDataSimulation();
             } else if (zerodhaStatus?.isConnected) {
-                console.log('✅ Zerodha connected, using real market data');
+                console.log('Zerodha connected, using real market data');
             }
 
             // Start server
             const port = process.env.PORT || 3001;
             this.server.listen(port, () => {
-                console.log(`🌟 Server running on port ${port}`);
-                console.log(`📊 Dashboard: http://localhost:${port}`);
-                console.log(`🔌 WebSocket: ws://localhost:${port}`);
-                console.log(`💾 Database: PostgreSQL on ${this.databaseService.config.host}:${this.databaseService.config.port}`);
-                console.log('✅ All systems operational');
+                console.log(`Server running on port ${port}`);
+                console.log(`Dashboard: http://localhost:${port}`);
+                console.log(`WebSocket: ws://localhost:${port}`);
+                console.log(`Database: PostgreSQL on ${this.databaseService.config.host}:${this.databaseService.config.port}`);
+                console.log('All systems operational');
             });
 
         } catch (error) {
-            console.error('❌ Server startup failed:', error);
+            console.error('Server startup failed:', error);
             process.exit(1);
         }
     }
@@ -481,7 +481,7 @@ class CostOfCarryServer {
      * Graceful shutdown
      */
     async shutdown() {
-        console.log('🛑 Shutting down server...');
+        console.log('Shutting down server...');
 
         try {
             // Stop expiry monitoring
@@ -498,12 +498,12 @@ class CostOfCarryServer {
 
             // Close server
             this.server.close(() => {
-                console.log('✅ Server shutdown complete');
+                console.log('Server shutdown complete');
                 process.exit(0);
             });
 
         } catch (error) {
-            console.error('❌ Error during shutdown:', error);
+            console.error('Error during shutdown:', error);
             process.exit(1);
         }
     }
