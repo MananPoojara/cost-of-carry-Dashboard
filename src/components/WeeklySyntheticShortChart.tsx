@@ -1,5 +1,5 @@
 /**
- * Spot vs Synthetic Chart - Professional Financial Dashboard with ApexCharts
+ * Weekly Synthetic Short Chart - Professional Financial Dashboard with ApexCharts
  */
 
 import React, { useState, useEffect } from 'react';
@@ -9,13 +9,11 @@ import { ApexOptions } from 'apexcharts';
 interface ChartDataPoint {
     time: string;
     timestamp: number;
-    spot: number;
-    weeklySynthetic?: number;
+    weeklySyntheticShort: number;
 }
 
-interface SpotVsSyntheticChartProps {
+interface WeeklySyntheticShortChartProps {
     data?: {
-        spot: number;
         weeklySynthetic?: number;
         timestamp: string;
     };
@@ -23,7 +21,7 @@ interface SpotVsSyntheticChartProps {
     isConnected: boolean;
 }
 
-const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
+const WeeklySyntheticShortChart: React.FC<WeeklySyntheticShortChartProps> = ({
     data,
     history,
     isConnected
@@ -34,12 +32,8 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
     useEffect(() => {
         if (history && history.length > 0) {
             const validHistory = [];
-            
             for (const d of history) {
-                const spotValid = d.spot && !isNaN(d.spot);
-                const weeklyValid = d.weeklySynthetic && !isNaN(d.weeklySynthetic);
-                
-                if (spotValid && weeklyValid) {
+                if (d.weeklySynthetic && !isNaN(d.weeklySynthetic)) {
                     validHistory.push({
                         time: new Date(d.timestamp).toLocaleTimeString('en-IN', {
                             hour: '2-digit',
@@ -48,20 +42,17 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
                             hour12: false
                         }),
                         timestamp: new Date(d.timestamp).getTime(),
-                        spot: d.spot,
-                        weeklySynthetic: d.weeklySynthetic
+                        weeklySyntheticShort: d.weeklySynthetic
                     });
                 }
             }
-            
             setChartData(validHistory);
         }
     }, [history]);
 
-    // Handle real-time data updates
     useEffect(() => {
-        if (data && data.spot) {
-            const newDataPoint = {
+        if (data && data.weeklySynthetic) {
+            const newDataPoint: ChartDataPoint = {
                 time: new Date(data.timestamp).toLocaleTimeString('en-IN', {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -69,11 +60,10 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
                     hour12: false
                 }),
                 timestamp: new Date(data.timestamp).getTime(),
-                spot: data.spot,
-                weeklySynthetic: data.weeklySynthetic
+                weeklySyntheticShort: data.weeklySynthetic
             };
 
-            if (isNaN(data.spot) || (data.weeklySynthetic && isNaN(data.weeklySynthetic))) {
+            if (isNaN(data.weeklySynthetic)) {
                 return;
             }
 
@@ -84,8 +74,7 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
     const formatPrice = (v: number) => v.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     // Prepare ApexCharts data series
-    const spotSeries = chartData.map(point => [point.timestamp, point.spot]);
-    const syntheticSeries = chartData.map(point => [point.timestamp, point.weeklySynthetic || 0]);
+    const seriesData = chartData.map(point => [point.timestamp, point.weeklySyntheticShort]);
 
     // ApexCharts configuration
     const chartOptions: ApexOptions = {
@@ -107,7 +96,7 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
             background: 'transparent',
             foreColor: '#6b7280'
         },
-        colors: ['#3b82f6', '#10b981'],
+        colors: ['#10b981'],
         stroke: {
             width: 2.5,
             curve: 'smooth'
@@ -202,35 +191,21 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
         }
     };
 
-    const series = [
-        {
-            name: 'Spot Price',
-            data: spotSeries
-        },
-        {
-            name: 'Weekly Synthetic',
-            data: syntheticSeries
-        }
-    ];
+    const series = [{
+        name: 'Weekly Synthetic Short',
+        data: seriesData
+    }];
 
     return (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md">
             <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
                 <h2 className="text-sm font-bold text-gray-800 transition-all duration-300 tracking-tight">
-                    SPOT VS WEEKLY SYNTHETIC
+                    WEEKLY SYNTHETIC SHORT
                 </h2>
-                <div className="flex space-x-4">
-                    <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">SPOT</span>
-                        <div className="font-mono text-sm font-bold text-gray-700 transition-all duration-300">
-                            {data?.spot ? formatPrice(data.spot) : '--'}
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">SYNTHETIC</span>
-                        <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
-                            {data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : '--'}
-                        </div>
+                <div className="text-right">
+                    <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">VALUE</span>
+                    <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
+                        {data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : '--'}
                     </div>
                 </div>
             </div>
@@ -253,4 +228,4 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
     );
 };
 
-export default SpotVsSyntheticChart;
+export default WeeklySyntheticShortChart;

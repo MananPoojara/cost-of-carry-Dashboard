@@ -1,233 +1,228 @@
 /**
- * Calendar Spread Chart Component
- * Shows Monthly vs Weekly synthetic spread analysis
+ * Calendar Spread Chart - Professional Financial Dashboard with ApexCharts
  */
 
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import Chart from 'react-apexcharts';
+import { ApexOptions } from 'apexcharts';
 
-interface SpreadDataPoint {
+interface ChartDataPoint {
     time: string;
     timestamp: number;
-    monthlySynthetic?: number;
-    weeklySynthetic?: number;
-    calendarSpread?: number;
+    monthlySynthetic: number;
+    weeklySynthetic: number;
 }
 
 interface CalendarSpreadChartProps {
     data?: {
         monthlySynthetic?: number;
         weeklySynthetic?: number;
-        calendarSpread?: number;
         timestamp: string;
     };
+    history?: any[];
     isConnected: boolean;
 }
 
-const CalendarSpreadChart: React.FC<CalendarSpreadChartProps> = ({
-    data,
-    isConnected
-}) => {
-    const [chartData, setChartData] = useState<SpreadDataPoint[]>([]);
-    const [spreadRange, setSpreadRange] = useState({ min: 0, max: 0 });
+const CalendarSpreadChart: React.FC<CalendarSpreadChartProps> = ({ data, history, isConnected }) => {
+    const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
 
     useEffect(() => {
-        if (data && (data.monthlySynthetic !== undefined || data.weeklySynthetic !== undefined)) {
-            const newDataPoint: SpreadDataPoint = {
-                time: new Date(data.timestamp).toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
+        if (history && history.length > 0) {
+            const historyPoints = history.map(d => ({
+                time: new Date(d.timestamp).toLocaleTimeString('en-IN', { 
+                    hour12: false, 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                }),
+                timestamp: new Date(d.timestamp).getTime(),
+                monthlySynthetic: d.monthlySynthetic || 0,
+                weeklySynthetic: d.weeklySynthetic || 0
+            }));
+            setChartData(historyPoints);
+        }
+    }, [history]);
+
+    useEffect(() => {
+        if (data && data.timestamp && (data.monthlySynthetic !== undefined || data.weeklySynthetic !== undefined)) {
+            const newDataPoint: ChartDataPoint = {
+                time: new Date(data.timestamp).toLocaleTimeString('en-IN', { 
+                    hour12: false, 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
                 }),
                 timestamp: new Date(data.timestamp).getTime(),
-                monthlySynthetic: data.monthlySynthetic,
-                weeklySynthetic: data.weeklySynthetic,
-                calendarSpread: data.calendarSpread
+                monthlySynthetic: data.monthlySynthetic || 0,
+                weeklySynthetic: data.weeklySynthetic || 0
             };
-
-            setChartData(prev => {
-                const updated = [...prev, newDataPoint];
-                // Keep only last 100 data points for performance
-                const trimmed = updated.slice(-100);
-
-                // Update spread range for better Y-axis scaling
-                const allValues = trimmed.flatMap(point => [
-                    point.monthlySynthetic || 0,
-                    point.weeklySynthetic || 0,
-                    point.calendarSpread || 0
-                ]).filter(value => value !== 0);
-
-                if (allValues.length > 0) {
-                    const min = Math.min(...allValues);
-                    const max = Math.max(...allValues);
-                    const padding = (max - min) * 0.02; // 2% padding
-                    setSpreadRange({
-                        min: Math.floor(min - padding),
-                        max: Math.ceil(max + padding)
-                    });
-                }
-
-                return trimmed;
-            });
+            setChartData(prev => [...prev, newDataPoint].slice(-60));
         }
     }, [data]);
 
-    const formatPrice = (value: number) => `₹${value.toFixed(2)}`;
+    // Prepare ApexCharts data series
+    const monthlySeries = chartData.map(point => [point.timestamp, point.monthlySynthetic]);
+    const weeklySeries = chartData.map(point => [point.timestamp, point.weeklySynthetic]);
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            return (
-                <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
-                    <p className="text-gray-300 text-sm mb-2">{`Time: ${label}`}</p>
-                    {data.monthlySynthetic !== undefined && (
-                        <p className="text-yellow-400 text-sm">
-                            {`Monthly Synthetic: ${formatPrice(data.monthlySynthetic)}`}
-                        </p>
-                    )}
-                    {data.weeklySynthetic !== undefined && (
-                        <p className="text-red-400 text-sm">
-                            {`Weekly Synthetic: ${formatPrice(data.weeklySynthetic)}`}
-                        </p>
-                    )}
-                    {data.calendarSpread !== undefined && (
-                        <p className="text-purple-400 text-sm font-semibold">
-                            {`Calendar Spread: ${formatPrice(data.calendarSpread)}`}
-                        </p>
-                    )}
-                    <p className="text-gray-400 text-xs mt-1">
-                        Spread = Monthly - Weekly
-                    </p>
-                </div>
-            );
+    // ApexCharts configuration
+    const chartOptions: ApexOptions = {
+        chart: {
+            type: 'line',
+            height: '100%',
+            toolbar: {
+                show: false
+            },
+            zoom: {
+                enabled: false
+            },
+            animations: {
+                enabled: true,
+                dynamicAnimation: {
+                    speed: 300
+                }
+            },
+            background: 'transparent',
+            foreColor: '#6b7280'
+        },
+        colors: ['#10b981', '#f59e0b'],
+        stroke: {
+            width: [2.5, 2],
+            curve: 'smooth'
+        },
+        dataLabels: {
+            enabled: false
+        },
+        markers: {
+            size: 0,
+            hover: {
+                size: 6
+            }
+        },
+        tooltip: {
+            theme: 'dark',
+            x: {
+                format: 'HH:mm:ss'
+            },
+            y: {
+                formatter: (value: number) => `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+            },
+            marker: {
+                show: false
+            },
+            style: {
+                fontSize: '12px',
+                fontFamily: 'monospace'
+            }
+        },
+        grid: {
+            borderColor: '#e5e7eb',
+            strokeDashArray: 3,
+            xaxis: {
+                lines: {
+                    show: false
+                }
+            },
+            yaxis: {
+                lines: {
+                    show: true
+                }
+            }
+        },
+        xaxis: {
+            type: 'datetime',
+            labels: {
+                show: false,
+                datetimeFormatter: {
+                    hour: 'HH:mm'
+                }
+            },
+            axisBorder: {
+                show: false
+            },
+            axisTicks: {
+                show: false
+            }
+        },
+        yaxis: {
+            opposite: true,
+            labels: {
+                formatter: (value: number) => `₹${value.toLocaleString('en-IN')}`,
+                style: {
+                    colors: ['#6b7280'],
+                    fontSize: '11px',
+                    fontFamily: 'monospace',
+                    fontWeight: 600
+                }
+            },
+            axisBorder: {
+                show: false
+            },
+            axisTicks: {
+                show: false
+            }
+        },
+        legend: {
+            show: false
+        },
+        states: {
+            hover: {
+                filter: {
+                    type: 'lighten'
+                }
+            },
+            active: {
+                allowMultipleDataPointsSelection: false,
+                filter: {
+                    type: 'darken'
+                }
+            }
         }
-        return null;
     };
 
+    const series = [
+        {
+            name: 'Monthly Synthetic',
+            data: monthlySeries
+        },
+        {
+            name: 'Weekly Synthetic',
+            data: weeklySeries
+        }
+    ];
+
     return (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-lg">
-            {/* Chart Header */}
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-white">
-                    Monthly Long vs Weekly Short Spread
-                </h2>
-                <div className="flex items-center space-x-4">
-                    {/* Current Values */}
-                    <div className="flex items-center space-x-4 text-sm">
-                        <div className="flex items-center">
-                            <div className="w-3 h-3 bg-yellow-400 rounded-full mr-2"></div>
-                            <span className="text-gray-300">
-                                Monthly: {data?.monthlySynthetic ? formatPrice(data.monthlySynthetic) : '--'}
-                            </span>
-                        </div>
-                        <div className="flex items-center">
-                            <div className="w-3 h-3 bg-red-400 rounded-full mr-2"></div>
-                            <span className="text-gray-300">
-                                Weekly: {data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : '--'}
-                            </span>
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md">
+            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
+                <h2 className="text-sm font-bold text-gray-800 transition-all duration-300 tracking-tight">MONTHLY VS WEEKLY SYNTHETIC</h2>
+                <div className="flex space-x-3">
+                    <div className="text-right">
+                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">MLY</span>
+                        <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
+                            {data?.monthlySynthetic ? data.monthlySynthetic.toFixed(2) : '--'}
                         </div>
                     </div>
-
-                    {/* Connection Status */}
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${isConnected ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                        }`}>
-                        {isConnected ? 'LIVE' : 'DISCONNECTED'}
+                    <div className="text-right">
+                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">WKY</span>
+                        <div className="font-mono text-sm font-bold text-amber-600 transition-all duration-300">
+                            {data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : '--'}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Chart */}
-            <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis
-                            dataKey="time"
-                            stroke="#9CA3AF"
-                            fontSize={12}
-                            interval="preserveStartEnd"
-                        />
-                        <YAxis
-                            stroke="#9CA3AF"
-                            fontSize={12}
-                            tickFormatter={formatPrice}
-                            domain={spreadRange.min > 0 ? [spreadRange.min, spreadRange.max] : ['auto', 'auto']}
-                        />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend />
-
-                        {/* Monthly Synthetic Line */}
-                        <Line
-                            type="monotone"
-                            dataKey="monthlySynthetic"
-                            stroke="#FCD34D"
-                            strokeWidth={2}
-                            dot={false}
-                            name="Monthly Synthetic"
-                            connectNulls={false}
-                        />
-
-                        {/* Weekly Synthetic Line */}
-                        <Line
-                            type="monotone"
-                            dataKey="weeklySynthetic"
-                            stroke="#F87171"
-                            strokeWidth={2}
-                            dot={false}
-                            name="Weekly Synthetic"
-                            connectNulls={false}
-                        />
-
-                        {/* Calendar Spread Line */}
-                        <Line
-                            type="monotone"
-                            dataKey="calendarSpread"
-                            stroke="#A78BFA"
-                            strokeWidth={3}
-                            dot={false}
-                            name="Calendar Spread"
-                            connectNulls={false}
-                        />
-
-                        {/* Reference line at zero for spread */}
-                        <ReferenceLine y={0} stroke="#6B7280" strokeDasharray="2 2" />
-                    </LineChart>
-                </ResponsiveContainer>
-            </div>
-
-            {/* Calendar Spread Display */}
-            {data?.calendarSpread !== undefined && (
-                <div className="mt-4 pt-4 border-t border-gray-700">
-                    <div className="flex items-center justify-center space-x-4">
-                        <span className="text-sm text-gray-400">Calendar Spread:</span>
-                        <span className={`font-semibold text-xl ${data.calendarSpread >= 0 ? 'text-purple-400' : 'text-red-400'
-                            }`}>
-                            {data.calendarSpread >= 0 ? '+' : ''}₹{data.calendarSpread.toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                            (Monthly - Weekly)
-                        </span>
+            <div className="h-[300px] p-4">
+                {chartData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="text-sm text-gray-400">Waiting for data...</div>
                     </div>
-
-                    {/* Spread Interpretation */}
-                    <div className="mt-2 text-center">
-                        <p className="text-xs text-gray-400">
-                            {data.calendarSpread > 0
-                                ? 'Monthly trading at premium to Weekly (Time decay advantage)'
-                                : data.calendarSpread < 0
-                                    ? 'Weekly trading at premium to Monthly (Unusual condition)'
-                                    : 'No spread difference'
-                            }
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* Chart Info */}
-            <div className="mt-2 text-center">
-                <p className="text-xs text-gray-500">
-                    Showing last {chartData.length} data points • Calendar spread analysis
-                </p>
+                ) : (
+                    <Chart
+                        options={chartOptions}
+                        series={series}
+                        type="line"
+                        height="100%"
+                    />
+                )}
             </div>
         </div>
     );

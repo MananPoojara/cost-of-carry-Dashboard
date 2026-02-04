@@ -68,11 +68,11 @@ class ZerodhaService {
             this.isAuthenticated = true;
             this.connectionState = 'CONNECTED';
 
-            console.log('✅ Zerodha Service initialized successfully');
+            console.log('Zerodha Service initialized successfully');
             return true;
 
         } catch (error) {
-            console.error('❌ Zerodha Service initialization error:', error.message);
+            console.error('Zerodha Service initialization error:', error.message);
             this.lastError = {
                 message: error.message,
                 timestamp: new Date().toISOString(),
@@ -114,7 +114,7 @@ class ZerodhaService {
             }
 
             if (!curlFilePath) {
-                console.error('❌ Could not find kite-curl-request.txt in any expected location');
+                console.error('Could not find kite-curl-request.txt in any expected location');
                 return false;
             }
             

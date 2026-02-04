@@ -23,7 +23,7 @@ class NiftySyntheticServer {
         this.server = http.createServer(this.app);
         this.io = socketIo(this.server, {
             cors: {
-                origin: process.env.FRONTEND_URL || "http://localhost:3000",
+                origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"],
                 methods: ["GET", "POST"]
             }
         });
@@ -192,18 +192,59 @@ class NiftySyntheticServer {
      * Setup Socket.IO handlers
      */
     setupSocketHandlers() {
-        this.io.on('connection', (socket) => {
+        this.io.on('connection', async (socket) => {
             this.connectedClients++;
-            console.log(`Client connected. Total clients: ${this.connectedClients}`);
+            console.log(`\n${'='.repeat(60)}`);
+            console.log(`✅ NEW CLIENT CONNECTED`);
+            console.log(`   Socket ID: ${socket.id}`);
+            console.log(`   Total clients: ${this.connectedClients}`);
+            console.log(`   Server initialized: ${this.isInitialized}`);
+            console.log(`${'='.repeat(60)}\n`);
 
-            // Send current status to new client
+            // Send current status and historical data to new client
             if (this.isInitialized) {
-                socket.emit('marketData', {
-                    atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
-                    expiries: this.expiryManager?.getCurrentExpiries(),
-                    connectionStatus: this.connectionManager?.getStatus(),
-                    timestamp: new Date().toISOString()
-                });
+                try {
+                    // Get latest 50 points from DB for initial chart population
+                    const historicalData = await this.dbService.getHistoricalComputedData(null, null, 50);
+                    
+                    // Map DB format to broadcast format
+                    // Map DB format to broadcast format
+                    const formattedHistory = historicalData.map(d => ({
+                        spot: parseFloat(d.spot_price),
+                        weeklySynthetic: parseFloat(d.weekly_synthetic_future),
+                        monthlySynthetic: parseFloat(d.monthly_synthetic_future),
+                        weeklyCarry: parseFloat(d.weekly_cost_of_carry),
+                        monthlyCarry: parseFloat(d.monthly_cost_of_carry),
+                        calendarSpread: parseFloat(d.calendar_spread),
+                        timestamp: d.calculation_timestamp,
+                        atmStrike: parseFloat(d.atm_strike)
+                    })).reverse();
+
+                    // Send special 'historyData' event if we have data
+                    if (formattedHistory.length > 0) {
+                        socket.emit('historyData', formattedHistory);
+                    } else {
+                        console.log('⚠️ No historical data available in database');
+                    }
+
+                    // Also send current state
+                    const latestPoint = formattedHistory.length > 0 ? formattedHistory[formattedHistory.length - 1] : {};
+                    const initialData = {
+                        atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
+                        expiries: this.expiryManager?.getCurrentExpiries(),
+                        connectionStatus: this.connectionManager?.getStatus(),
+                        timestamp: new Date().toISOString(),
+                        ...latestPoint
+                    };
+                    console.log(`📤 Sending initial marketData event:`, {
+                        spot: initialData.spot,
+                        weeklySynthetic: initialData.weeklySynthetic,
+                        atmStrike: initialData.atmStrike
+                    });
+                    socket.emit('marketData', initialData);
+                } catch (error) {
+                    console.error('Error sending initial data to client:', error);
+                }
             }
 
             socket.on('disconnect', () => {
@@ -296,7 +337,7 @@ class NiftySyntheticServer {
 
             // Initialize Connection Manager
             this.connectionManager = new ConnectionManager(this.io);
-            this.connectionManager.initialize(this.zerodhaService, this.atmStrikeManager);
+            this.connectionManager.initialize(this.zerodhaService, this.atmStrikeManager, this.dataStorage);
             console.log('Connection Manager initialized');
 
             // Set initial expiries
@@ -307,8 +348,19 @@ class NiftySyntheticServer {
 
             this.expiryManager.setExpiries(nextWeekly, nextMonthly);
 
-            // Initialize ATM strike with current spot price
-            await this.atmStrikeManager.initialize(21400);
+            // Initialize ATM strike with a more realistic default (will be updated by NIFTY_SPOT tick)
+            await this.atmStrikeManager.initialize(25000);
+
+            // Connect Zerodha data to storage
+            if (zerodhaInitialized) {
+                this.zerodhaService.onData((tickData) => {
+                    // Store in database
+                    this.dbService.storeMarketData(tickData);
+                    // Process for real-time calculations
+                    this.dataStorage.processTick(tickData);
+                });
+                console.log('Zerodha data pipeline connected');
+            }
 
             this.isInitialized = true;
             console.log('All services initialized successfully');
@@ -411,7 +463,7 @@ class NiftySyntheticServer {
      */
     async start() {
         try {
-            console.log('🚀 Starting NIFTY Synthetic Dashboard Server...');
+            console.log('Starting NIFTY Synthetic Dashboard Server...');
 
             // Initialize database
             const dbConnected = await this.initializeDatabase();
@@ -425,24 +477,24 @@ class NiftySyntheticServer {
             // Start mock data simulation if Zerodha is not connected
             const zerodhaStatus = this.zerodhaService?.getStatus();
             if (process.env.NODE_ENV !== 'production' && !zerodhaStatus?.isConnected) {
-                console.log('⚠️ Zerodha not connected, starting mock data simulation...');
+                console.log('Zerodha not connected, starting mock data simulation...');
                 this.startMockDataSimulation();
             } else if (zerodhaStatus?.isConnected) {
-                console.log('✅ Zerodha connected, using real market data');
+                console.log('Zerodha connected, using real market data');
             }
 
             // Start server
             const port = process.env.PORT || 3001;
             this.server.listen(port, () => {
-                console.log(`🌟 Server running on port ${port}`);
-                console.log(`📊 Dashboard: http://localhost:${port}`);
-                console.log(`🔌 WebSocket: ws://localhost:${port}`);
-                console.log(`💾 Database: ${process.env.DATABASE_URL || 'postgresql://postgres:postgres123@localhost:5433/cost_of_carry_db'}`);
-                console.log('✅ All systems operational');
+                console.log(`Server running on port ${port}`);
+                console.log(`Dashboard: http://localhost:${port}`);
+                console.log(`WebSocket: ws://localhost:${port}`);
+                console.log(`Database: ${process.env.DATABASE_URL || 'postgresql://postgres:postgres123@localhost:5433/cost_of_carry_db'}`);
+                console.log('All systems operational');
             });
 
         } catch (error) {
-            console.error('❌ Server startup failed:', error);
+            console.error('Server startup failed:', error);
             process.exit(1);
         }
     }
@@ -451,7 +503,7 @@ class NiftySyntheticServer {
      * Graceful shutdown
      */
     async shutdown() {
-        console.log('🛑 Shutting down server...');
+        console.log('Shutting down server...');
 
         try {
             // Stop expiry monitoring
@@ -465,12 +517,12 @@ class NiftySyntheticServer {
 
             // Close server
             this.server.close(() => {
-                console.log('✅ Server shutdown complete');
+                console.log('Server shutdown complete');
                 process.exit(0);
             });
 
         } catch (error) {
-            console.error('❌ Error during shutdown:', error);
+            console.error('Error during shutdown:', error);
             process.exit(1);
         }
     }

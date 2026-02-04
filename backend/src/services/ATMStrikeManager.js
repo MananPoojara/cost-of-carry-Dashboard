@@ -137,9 +137,13 @@ class ATMStrikeManager {
             timestamp: new Date()
         };
 
-        this.subscribers.forEach(callback => {
+        this.subscribers.forEach(sub => {
             try {
-                callback(changeEvent);
+                if (typeof sub === 'function') {
+                    sub(changeEvent);
+                } else if (sub && typeof sub.callback === 'function') {
+                    sub.callback(changeEvent);
+                }
             } catch (error) {
                 console.error('Error notifying strike change subscriber:', error);
             }

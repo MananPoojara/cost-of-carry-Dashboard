@@ -11,7 +11,7 @@ class OptimizedDataStorage {
         this.tickBuffer = new Map(); // In-memory tick buffer
         this.lastStoredTime = 0;
         this.storageInterval = 1000; // Store every 1 second
-        this.maxTickAge = 5000; // 5 seconds max age for fresh data
+        this.maxTickAge = 120000; // 2 minutes max age for simulated candle data
         this.atmStrikeManager = null;
         this.spreadAnalyzer = null;
         this.isStorageActive = false;
@@ -25,8 +25,19 @@ class OptimizedDataStorage {
     initialize(atmStrikeManager, spreadAnalyzer) {
         this.atmStrikeManager = atmStrikeManager;
         this.spreadAnalyzer = spreadAnalyzer;
+        this.instrumentMap = new Map(); // Map real IDs to internal IDs (WEEKLY_CALL, etc)
         this.startStorageTimer();
-        console.log('🗄️ Optimized Data Storage initialized');
+        console.log('Optimized Data Storage initialized');
+    }
+
+    /**
+     * Set instrument mapping
+     * @param {string} realId - Real exchange instrument ID (e.g. NIFTY_25000_CE_WEEKLY)
+     * @param {string} internalId - Internal ID (e.g. WEEKLY_CALL)
+     */
+    setInstrumentMapping(realId, internalId) {
+        this.instrumentMap.set(realId, internalId);
+        console.log(`Mapping instrument ${realId} to ${internalId}`);
     }
 
     /**
@@ -34,7 +45,13 @@ class OptimizedDataStorage {
      * @param {Object} tickData - Raw tick data from XTS
      */
     processTick(tickData) {
-        const instrumentId = tickData.ExchangeInstrumentID;
+        let instrumentId = tickData.ExchangeInstrumentID;
+        
+        // Apply mapping if exists
+        if (this.instrumentMap.has(instrumentId)) {
+            instrumentId = this.instrumentMap.get(instrumentId);
+        }
+
         const timestamp = Date.now();
 
         // Update in-memory buffer with latest tick
@@ -49,12 +66,25 @@ class OptimizedDataStorage {
             rawData: tickData // Keep for debugging if needed
         });
 
+        // SPECIAL CASE: If this is a spot tick, update ATM strike manager immediately
+        // This breaks the circular dependency where ATM strike won't update without synthetic data
+        if (instrumentId === 'NIFTY_SPOT' && this.atmStrikeManager) {
+            this.atmStrikeManager.checkATMStrike(tickData.LastTradedPrice);
+        }
+
         // Compute synthetic immediately for real-time display
         const syntheticData = this.computeSynthetic();
 
         if (syntheticData) {
             // Broadcast to frontend immediately (real-time)
             this.broadcastToFrontend(syntheticData);
+            
+            // Log legs every 10 seconds
+            if (Date.now() % 10000 < 500) {
+                const weeklyCall = this.tickBuffer.get('WEEKLY_CALL');
+                const weeklyPut = this.tickBuffer.get('WEEKLY_PUT');
+                console.log(`[DataStorage] Spot: ${syntheticData.spot}, WKL_C: ${weeklyCall?.price}, WKL_P: ${weeklyPut?.price}, Strike: ${syntheticData.atmStrike}`);
+            }
 
             // Check for ATM strike changes
             if (this.atmStrikeManager && syntheticData.spot) {
@@ -70,7 +100,7 @@ class OptimizedDataStorage {
         if (this.isStorageActive) return;
 
         this.isStorageActive = true;
-        console.log('⏰ Starting storage timer (1-second intervals)');
+        console.log('Starting storage timer (1-second intervals)');
 
         setInterval(() => {
             const now = Date.now();
@@ -120,11 +150,11 @@ class OptimizedDataStorage {
 
             // Optional: Log storage stats periodically
             if (Date.now() % 60000 < 1000) { // Every minute
-                console.log(`💾 Data stored - Spot: ₹${syntheticData.spot}, Weekly Carry: ₹${syntheticData.weeklyCarry?.toFixed(2)}`);
+                console.log(`Data stored - Spot: ₹${syntheticData.spot}, Weekly Carry: ₹${syntheticData.weeklyCarry?.toFixed(2)}`);
             }
 
         } catch (error) {
-            console.error('❌ Error storing computed data:', error);
+            console.error('Error storing computed data:', error);
         }
     }
 
@@ -223,19 +253,50 @@ class OptimizedDataStorage {
 
         try {
             // Add connection status and market info
+            const isMarketClosed = this.getMarketStatus() !== 'OPEN';
+            let finalData = { ...syntheticData };
+            
+            // When market is closed, use the last computed data without variations
+            if (isMarketClosed) {
+                // Keep the real computed values as-is
+                // No modifications needed - this is the correct behavior
+            }
+            
+            // Get data range for market closed display
+            let dataRange = null;
+            if (isMarketClosed && this.db) {
+                // In a real implementation, you would query the database for date range
+                // For now, we'll use today's date as example
+                const today = new Date();
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                dataRange = {
+                    startDate: yesterday.toISOString().split('T')[0],
+                    endDate: today.toISOString().split('T')[0]
+                };
+            }
+
             const broadcastData = {
-                ...syntheticData,
+                ...finalData,
+                timestamp: syntheticData.timestamp instanceof Date ? syntheticData.timestamp.toISOString() : syntheticData.timestamp,
                 connectionStatus: 'LIVE',
                 marketStatus: this.getMarketStatus(),
+                isMarketClosed: isMarketClosed,
+                dataRange: dataRange,
                 expiries: this.atmStrikeManager?.getCurrentExpiries?.() || {},
                 lastUpdate: new Date().toISOString()
             };
 
             // Broadcast to all connected clients
             this.socketServer.emit('marketData', broadcastData);
+            
+            // Log periodically
+            if (Date.now() % 10000 < 1000) {
+                console.log(`[Broadcast] Spot: ${broadcastData.spot}, Weekly Synth: ${broadcastData.weeklySynthetic}`);
+            }
 
         } catch (error) {
-            console.error('❌ Error broadcasting to frontend:', error);
+            console.error('Error broadcasting to frontend:', error);
         }
     }
 
@@ -323,7 +384,7 @@ class OptimizedDataStorage {
      */
     stopStorage() {
         this.isStorageActive = false;
-        console.log('⏹️ Storage timer stopped');
+        console.log('Storage timer stopped');
     }
 }
 

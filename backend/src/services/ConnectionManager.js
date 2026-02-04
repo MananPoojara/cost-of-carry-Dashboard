@@ -29,9 +29,10 @@ class ConnectionManager {
      * @param {Object} zerodhaService - Zerodha service
      * @param {Object} atmStrikeManager - ATM Strike Manager
      */
-    initialize(zerodhaService, atmStrikeManager) {
+    initialize(zerodhaService, atmStrikeManager, dataStorage) {
         this.zerodhaService = zerodhaService;
         this.atmStrikeManager = atmStrikeManager;
+        this.dataStorage = dataStorage;
         this.setupConnectionHandlers();
         console.log('Connection Manager initialized');
     }
@@ -48,7 +49,31 @@ class ConnectionManager {
         // Monitor Zerodha connection status
         this.monitorZerodhaConnection();
 
+        // Listen for ATM strike changes to update mappings
+        if (this.atmStrikeManager) {
+            this.atmStrikeManager.subscribe((event) => {
+                if (event.type === 'ATM_STRIKE_CHANGE') {
+                    console.log(`ATM Strike change detected by Connection Manager: ${event.oldStrike} -> ${event.newStrike}`);
+                    this.updateMappings(event.newStrike);
+                }
+            });
+        }
+
         console.log('Connection event handlers setup complete');
+    }
+
+    /**
+     * Update mappings in data storage when strike changes
+     * @param {number} currentATMStrike - New ATM strike
+     */
+    updateMappings(currentATMStrike) {
+        if (this.dataStorage) {
+            this.dataStorage.setInstrumentMapping(`NIFTY_${currentATMStrike}_CE_WEEKLY`, 'WEEKLY_CALL');
+            this.dataStorage.setInstrumentMapping(`NIFTY_${currentATMStrike}_PE_WEEKLY`, 'WEEKLY_PUT');
+            this.dataStorage.setInstrumentMapping(`NIFTY_${currentATMStrike}_CE_MONTHLY`, 'MONTHLY_CALL');
+            this.dataStorage.setInstrumentMapping(`NIFTY_${currentATMStrike}_PE_MONTHLY`, 'MONTHLY_PUT');
+            this.dataStorage.setInstrumentMapping('NIFTY_SPOT', 'NIFTY_SPOT');
+        }
     }
 
     /**
@@ -210,6 +235,9 @@ class ConnectionManager {
             ];
 
             console.log('Resubscribing to instruments:', instruments);
+
+            // Set mappings in data storage
+            this.updateMappings(currentATMStrike);
 
             try {
                 // Resubscribe through Zerodha service

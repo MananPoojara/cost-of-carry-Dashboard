@@ -11,6 +11,12 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        'bloomberg-cyan': '#00e5ff',
+        'bloomberg-amber': '#ffab00',
+        'bloomberg-emerald': '#00ffa3',
+        'bloomberg-ruby': '#ff3d71',
+        'glass-bg': 'rgba(13, 17, 23, 0.7)',
+        'glass-border': 'rgba(255, 255, 255, 0.05)',
       },
     },
   },

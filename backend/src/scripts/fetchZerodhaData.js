@@ -38,10 +38,10 @@ class ZerodhaDataFetcher {
                 throw new Error('Failed to load connection constants');
             }
 
-            console.log('✅ Zerodha Data Fetcher initialized');
+            console.log('Zerodha Data Fetcher initialized');
             return true;
         } catch (error) {
-            console.error('❌ Initialization failed:', error);
+            console.error('Initialization failed:', error);
             return false;
         }
     }
@@ -50,19 +50,19 @@ class ZerodhaDataFetcher {
      * Update instrument master for all exchanges
      */
     async updateInstrumentMaster() {
-        console.log('📊 Updating instrument master...');
+        console.log('Updating instrument master...');
 
         try {
             const tickersByExchange = await this.zerodhaService.updateTickersToExchangeFile();
 
-            console.log('\n📋 Summary:');
+            console.log('\n Summary:');
             for (const [exchange, tickers] of Object.entries(tickersByExchange)) {
                 console.log(`   ${exchange}: ${tickers.length} instruments`);
             }
 
             return tickersByExchange;
         } catch (error) {
-            console.error('❌ Error updating instrument master:', error);
+            console.error('Error updating instrument master:', error);
             throw error;
         }
     }
@@ -75,7 +75,7 @@ class ZerodhaDataFetcher {
             throw new Error(`Invalid exchange: ${exchange}. Valid exchanges: ${this.exchanges.join(', ')}`);
         }
 
-        console.log(`\n🔄 Downloading data for ${exchange}...`);
+        console.log(`\n Downloading data for ${exchange}...`);
         await this.zerodhaService.downloadExchangeData(exchange);
     }
 
@@ -83,14 +83,14 @@ class ZerodhaDataFetcher {
      * Download data for all exchanges
      */
     async downloadAllData() {
-        console.log('\n🔄 Downloading data for all exchanges...');
+        console.log('\n Downloading data for all exchanges...');
 
         for (const exchange of this.exchanges) {
             try {
                 await this.downloadExchangeData(exchange);
-                console.log(`✅ Completed ${exchange}`);
+                console.log(`Completed ${exchange}`);
             } catch (error) {
-                console.error(`❌ Error downloading ${exchange}:`, error.message);
+                console.error(`Error downloading ${exchange}:`, error.message);
             }
         }
     }
@@ -100,11 +100,11 @@ class ZerodhaDataFetcher {
      */
     async showStatistics() {
         try {
-            console.log('\n📊 Database Statistics:');
+            console.log('\n Database Statistics:');
             const stats = await this.dbService.getStatistics();
             console.log(JSON.stringify(stats, null, 2));
         } catch (error) {
-            console.error('❌ Error showing statistics:', error);
+            console.error('Error showing statistics:', error);
         }
     }
 
