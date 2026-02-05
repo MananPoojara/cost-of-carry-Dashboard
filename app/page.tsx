@@ -112,7 +112,7 @@ export default function DashboardPage() {
   }, [data, history]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-50">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-50 overflow-hidden">
       
       {/* Market Status Header */}
       <MarketStatusHeader 
