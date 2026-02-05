@@ -114,24 +114,13 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-900 text-white">
       
-      {/* Market Closed Notification */}
-      {data?.isMarketClosed && (
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 flex-shrink-0 shadow-lg">
-          <div className="flex items-center justify-center">
-            <div className="flex items-center space-x-3">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div className="text-center">
-                <div className="text-white font-bold text-sm">MARKET CLOSED</div>
-                <div className="text-white/90 text-xs">
-                  Showing data from {data?.dataRange?.startDate} to {data?.dataRange?.endDate}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Market Status Header */}
+      <MarketStatusHeader 
+        atmStrike={data?.atmStrike}
+        spreadZScore={data?.spreadZScore}
+        marketStatus={data?.marketStatus}
+        isMarketClosed={data?.isMarketClosed}
+      />
 
       {/* Top Header Bar */}
       <header className="bg-gray-800 px-6 py-4 flex-shrink-0 border-b border-gray-700">
@@ -256,25 +245,25 @@ export default function DashboardPage() {
         
         {/* Charts Container */}
         <div className="flex-1 p-4 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-4 h-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
             {/* Spot vs Synthetic Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
               <SpotVsSyntheticChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Cost of Carry Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
               <CostOfCarryChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Calendar Spread Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
               <CalendarSpreadChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Weekly Synthetic Short Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
               <WeeklySyntheticShortChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             

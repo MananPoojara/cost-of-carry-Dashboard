@@ -296,7 +296,7 @@ class OptimizedDataStorage {
     }
 
     /**
-     * Get current market status
+     * Get current market status based on Indian market hours
      * @returns {string} Market status
      */
     getMarketStatus() {
@@ -305,9 +305,9 @@ class OptimizedDataStorage {
         const minute = now.getMinutes();
         const currentTime = hour * 60 + minute;
 
-        // Market hours: 9:00 AM to 4:00 PM IST (as per user requirement)
-        const marketOpen = 9 * 60 + 0; // 9:00 AM
-        const marketClose = 16 * 60 + 0; // 4:00 PM
+        // Market hours: 9:15 AM to 3:30 PM IST
+        const marketOpen = 9 * 60 + 15;  // 9:15 AM
+        const marketClose = 15 * 60 + 30; // 3:30 PM
 
         if (currentTime >= marketOpen && currentTime < marketClose) {
             return 'OPEN';

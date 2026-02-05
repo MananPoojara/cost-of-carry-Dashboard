@@ -31,6 +31,10 @@ class ZerodhaService {
         this.fetchInterval = null;
         this.fetchIntervalMs = 5000; // 50 seconds
 
+        // Market hours tracking
+        this.isMarketHours = true;
+        this.marketCheckInterval = null;
+
         // Error tracking
         this.lastError = null;
         this.connectionState = 'DISCONNECTED';
@@ -67,8 +71,13 @@ class ZerodhaService {
             this.isConnected = true;
             this.isAuthenticated = true;
             this.connectionState = 'CONNECTED';
+            
+            // Initialize market hours status
+            this.isMarketHours = this.isMarketOpen();
+            this.startMarketHoursMonitoring();
 
             console.log('Zerodha Service initialized successfully');
+            console.log(`Market status: ${this.isMarketHours ? 'OPEN' : 'CLOSED'}`);
             return true;
 
         } catch (error) {
@@ -302,10 +311,23 @@ class ZerodhaService {
      * Start real-time data fetching interval
      */
     startRealTimeDataFetch() {
+        // Check if market is open before starting
+        if (!this.isMarketOpen()) {
+            console.log('Market is closed - not starting real-time data fetch');
+            return;
+        }
+
         console.log('Starting real-time data fetch...');
 
         this.fetchInterval = setInterval(async () => {
             try {
+                // Check market hours on each fetch
+                if (!this.isMarketOpen()) {
+                    console.log('Market closed during fetch cycle - stopping data fetch');
+                    this.stopRealTimeDataFetch();
+                    return;
+                }
+                
                 await this.fetchCurrentMarketData();
             } catch (error) {
                 console.error('Error in real-time data fetch:', error.message);
@@ -313,6 +335,17 @@ class ZerodhaService {
         }, this.fetchIntervalMs);
 
         console.log(`Real-time data fetch started (${this.fetchIntervalMs}ms interval)`);
+    }
+
+    /**
+     * Stop real-time data fetching
+     */
+    stopRealTimeDataFetch() {
+        if (this.fetchInterval) {
+            clearInterval(this.fetchInterval);
+            this.fetchInterval = null;
+            console.log('Real-time data fetch stopped');
+        }
     }
 
     /**
@@ -383,10 +416,69 @@ class ZerodhaService {
     }
 
     /**
-     * Get instrument token from DB based on name or criteria
-     * @param {string} instrumentName - Instrument name or pattern
-     * @returns {Object|null} Token info
+     * Check if current time is within market hours
+     * Indian market hours: 9:15 AM - 3:30 PM IST
+     * @returns {boolean} True if market is open
      */
+    isMarketOpen() {
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        const currentTime = hour * 60 + minute;
+        
+        // Market hours: 9:15 AM to 3:30 PM IST
+        const marketOpen = 9 * 60 + 15;  // 9:15 AM
+        const marketClose = 15 * 60 + 30; // 3:30 PM
+        
+        return currentTime >= marketOpen && currentTime < marketClose;
+    }
+
+    /**
+     * Start market hours monitoring
+     */
+    startMarketHoursMonitoring() {
+        // Check market status every minute
+        this.marketCheckInterval = setInterval(() => {
+            const wasMarketOpen = this.isMarketHours;
+            this.isMarketHours = this.isMarketOpen();
+            
+            if (wasMarketOpen && !this.isMarketHours) {
+                console.log('Market has closed - stopping Zerodha API requests');
+                this.stopRealTimeDataFetch();
+            } else if (!wasMarketOpen && this.isMarketHours) {
+                console.log('Market has opened - resuming Zerodha API requests');
+                if (this.subscribedInstruments.size > 0) {
+                    this.startRealTimeDataFetch();
+                }
+            }
+        }, 60000); // Check every minute
+        
+        console.log('Market hours monitoring started');
+    }
+
+    /**
+     * Stop market hours monitoring
+     */
+    stopMarketHoursMonitoring() {
+        if (this.marketCheckInterval) {
+            clearInterval(this.marketCheckInterval);
+            this.marketCheckInterval = null;
+            console.log('Market hours monitoring stopped');
+        }
+    }
+
+    /**
+     * Get current market status
+     * @returns {Object} Market status information
+     */
+    getMarketStatus() {
+        return {
+            isOpen: this.isMarketOpen(),
+            isMarketHours: this.isMarketHours,
+            timestamp: new Date().toISOString()
+        };
+    }
+
     async getInstrumentToken(instrumentName) {
         // First check internal mapping
         if (this.instrumentTokens[instrumentName]) {
