@@ -137,7 +137,7 @@ const PremiumAnalysisChart: React.FC<PremiumAnalysisChartProps> = ({ data }) => 
                 <div className="text-right">
                     <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">Z-SCORE</span>
                     <div className={`font-mono text-sm font-bold transition-all duration-300 ${data?.spreadZScore && Math.abs(data.spreadZScore.zScore) > 2 ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {data?.spreadZScore ? (data.spreadZScore.zScore > 0 ? '+' : '') + data.spreadZScore.zScore.toFixed(2) : '--'}
+                        {data?.spreadZScore ? (data.spreadZScore.zScore > 0 ? '+' : '') + data.spreadZScore.zScore.toFixed(2) : 'No data'}
                     </div>
                 </div>
             </div>

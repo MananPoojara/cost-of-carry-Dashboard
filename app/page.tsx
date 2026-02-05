@@ -9,12 +9,24 @@ import CalendarSpreadChart from '@/src/components/CalendarSpreadChart';
 import WeeklySyntheticShortChart from '@/src/components/WeeklySyntheticShortChart';
 
 export default function DashboardPage() {
-  const { data, history, isConnected } = useWebSocket('http://localhost:3001');
+  // Use environment variable for WebSocket URL, default to localhost:3004
+  const wsUrl = typeof window !== 'undefined' 
+    ? process.env.NEXT_PUBLIC_WEBSOCKET_URL || `ws://${window.location.hostname}:3004`
+    : 'http://backend:3004';
+  const { data, history, isConnected } = useWebSocket(wsUrl);
   const [activeTab, setActiveTab] = useState('DASHBOARD');
   const [logs, setLogs] = useState<{msg: string, type: string, time: string}[]>([]);
   const [showLogs, setShowLogs] = useState(false);
   const [wsTestResult, setWsTestResult] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [, forceUpdate] = useState({});
+
+  // Loading state management
+  useEffect(() => {
+    if (data || history?.length > 0) {
+      setIsLoading(false);
+    }
+  }, [data, history]);
 
   // WebSocket test function
   const testWebSocketConnection = async () => {
@@ -22,12 +34,12 @@ export default function DashboardPage() {
       setWsTestResult('Testing WebSocket connection...');
       
       // Test 1: HTTP connection
-      const httpResponse = await fetch('http://localhost:3001');
+      const httpResponse = await fetch('http://localhost:3004');
       console.log('HTTP Test - Status:', httpResponse.status);
       
       // Test 2: WebSocket connection
       const io = (await import('socket.io-client')).default;
-      const socket = io('http://localhost:3001', {
+      const socket = io('http://localhost:3004', {
         transports: ['websocket'],
         timeout: 5000
       });
@@ -100,11 +112,11 @@ export default function DashboardPage() {
   }, [data, history]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-blue-50 text-gray-800 overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-gray-900 text-white">
       
       {/* Market Closed Notification */}
       {data?.isMarketClosed && (
-        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-3 flex-shrink-0 shadow-lg">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 flex-shrink-0 shadow-lg">
           <div className="flex items-center justify-center">
             <div className="flex items-center space-x-3">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,35 +134,34 @@ export default function DashboardPage() {
       )}
 
       {/* Top Header Bar */}
-      <header className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-3 flex-shrink-0 shadow-lg">
+      <header className="bg-gray-800 px-6 py-4 flex-shrink-0 border-b border-gray-700">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             {/* Logo/Brand */}
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-md border border-white/30">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
               <div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">DASHBOARD</h1>
-                <p className="text-xs text-white/80 font-medium">Professional Trading Analytics</p>
+                <h1 className="text-xl font-bold text-white">DASHBOARD</h1>
+                <p className="text-xs text-gray-400 font-medium">Real-time Trading Analytics</p>
               </div>
             </div>
             
             {/* Status Indicators */}
-            <div className="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20">
+            <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'} animate-pulse shadow-sm`}></div>
-                <span className="text-xs font-semibold text-white">
-                  {isConnected ? 'CONNECTED' : 'DISCONNECTED'}
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                <span className="text-xs font-medium text-gray-300">
+                  {isConnected ? 'LIVE' : 'OFFLINE'}
                 </span>
               </div>
-              <div className="h-3 w-px bg-white/30"></div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${data?.isMarketClosed ? 'bg-yellow-400' : 'bg-blue-400'} animate-pulse shadow-sm`}></div>
-                <span className="text-xs font-semibold text-white">
-                  {data?.isMarketClosed ? 'MARKET CLOSED' : 'MARKET OPEN'}
+                <div className={`w-2 h-2 rounded-full ${data?.isMarketClosed ? 'bg-amber-500' : 'bg-blue-500'} animate-pulse`}></div>
+                <span className="text-xs font-medium text-gray-300">
+                  {data?.isMarketClosed ? 'CLOSED' : 'OPEN'}
                 </span>
               </div>
             </div>
@@ -158,70 +169,67 @@ export default function DashboardPage() {
           
           <div className="flex items-center space-x-4">
             {/* Time Display */}
-            <div className="text-sm font-mono text-white bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20 shadow-md">
+            <div className="text-sm font-mono text-gray-300">
               {new Date().toLocaleTimeString('en-US', { hour12: true })} IST
             </div>
             
-            {/* Force Sync Button */}
+            {/* Logs Toggle */}
             <button 
-              className="px-4 py-2 bg-white text-blue-600 text-xs font-bold rounded-lg tracking-wide hover:bg-blue-50 transition-all shadow-md hover:shadow-lg hover:scale-105 active:scale-95 flex items-center space-x-2 border border-white/30"
+              className="px-3 py-1.5 bg-gray-700 text-white text-xs font-medium rounded-md hover:bg-gray-600 transition-colors flex items-center space-x-1"
               onClick={() => setShowLogs(!showLogs)}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span>{showLogs ? 'HIDE LOGS' : 'SHOW LOGS'}</span>
+              <span>{showLogs ? 'HIDE' : 'LOGS'}</span>
             </button>
-
           </div>
         </div>
       </header>
 
       {/* Metrics Cards Row */}
-      <div className="grid grid-cols-4 gap-4 px-6 py-4 bg-white flex-shrink-0 border-b border-gray-200 shadow-sm">
+      <div className="grid grid-cols-4 gap-4 px-6 py-4 bg-gray-800 flex-shrink-0 border-b border-gray-700">
         {/* ATM Strike */}
-        <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-blue-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">ATM STRIKE</div>
-          <div className="flex items-baseline space-x-2">
-            <span className="text-xl font-bold text-gray-800 transition-all">
-              ₹{data?.atmStrike?.toLocaleString() || '--'}
-            </span>
+        <div className="bg-gray-700 rounded-lg p-4">
+          <div className="text-xs text-gray-400 uppercase mb-1">ATM STRIKE</div>
+          <div className="text-xl font-bold text-white">
+            ₹{data?.atmStrike ? data.atmStrike.toLocaleString() : 'No data'}
           </div>
         </div>
 
         {/* Weekly Synthetic */}
-        <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-blue-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">WEEKLY SYNTHETIC</div>
-          <div className="flex items-baseline space-x-2">
-            <span className="text-xl font-bold text-gray-800 transition-all">
-              ₹{data?.weeklySynthetic?.toFixed(2) || '--'}
-            </span>
+        <div className="bg-gray-700 rounded-lg p-4">
+          <div className="text-xs text-gray-400 uppercase mb-1">WEEKLY SYNTHETIC</div>
+          <div className="text-xl font-bold text-white">
+            ₹{data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : 'No data'}
           </div>
         </div>
 
         {/* Calendar Spread */}
-        <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-blue-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">CALENDAR SPREAD</div>
-          <div className="flex items-baseline space-x-2">
-            <span className={`text-xl font-bold transition-all ${
-              data?.calendarSpread && data.calendarSpread >= 0 ? 'text-emerald-600' : 'text-red-600'
-            }`}>
-              {data?.calendarSpread ? (data.calendarSpread >= 0 ? '+' : '') + data.calendarSpread.toFixed(2) : '--'}
-            </span>
-            <span className="text-xs text-gray-500 uppercase font-semibold transition-all">PTS</span>
+        <div className="bg-gray-700 rounded-lg p-4">
+          <div className="text-xs text-gray-400 uppercase mb-1">CALENDAR SPREAD</div>
+          <div className={`text-xl font-bold ${
+            data?.calendarSpread !== undefined && data.calendarSpread !== null && data.calendarSpread >= 0 
+              ? 'text-green-500' 
+              : 'text-red-500'
+          }`}>
+            {data?.calendarSpread !== undefined && data.calendarSpread !== null
+              ? (data.calendarSpread >= 0 ? '+' : '') + data.calendarSpread.toFixed(2)
+              : 'No data'}
           </div>
         </div>
 
         {/* Cost of Carry */}
-        <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-blue-200">
-          <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">COST OF CARRY</div>
-          <div className="flex items-baseline space-x-2">
-            <span className={`text-xl font-bold transition-all ${
-              data?.weeklyCarry && data.weeklyCarry >= 0 ? 'text-emerald-600' : 'text-red-600'
-            }`}>
-              {data?.weeklyCarry ? (data.weeklyCarry >= 0 ? '+' : '') + data.weeklyCarry.toFixed(2) : '--'}
-            </span>
-            <span className="text-xs text-gray-500 uppercase font-semibold transition-all">BPS</span>
+        <div className="bg-gray-700 rounded-lg p-4">
+          <div className="text-xs text-gray-400 uppercase mb-1">COST OF CARRY</div>
+          <div className={`text-xl font-bold ${
+            data?.weeklyCarry !== undefined && data.weeklyCarry !== null && data.weeklyCarry >= 0
+              ? 'text-green-500'
+              : 'text-red-500'
+          }`}>
+            {data?.weeklyCarry !== undefined && data.weeklyCarry !== null
+              ? (data.weeklyCarry >= 0 ? '+' : '') + data.weeklyCarry.toFixed(2)
+              : 'No data'}
           </div>
         </div>
       </div>
@@ -229,27 +237,44 @@ export default function DashboardPage() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         
+        {/* Loading Overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div className="bg-gray-800 rounded-lg p-6 flex flex-col items-center space-y-4">
+              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-white">Loading Data</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  {isConnected 
+                    ? 'Connected, loading data...' 
+                    : 'Connecting...'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Charts Container */}
-        <div className="flex-1 p-6 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-          <div className="grid grid-cols-2 gap-6 auto-rows-fr">
+        <div className="flex-1 p-4 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-4 h-full">
             
             {/* Spot vs Synthetic Chart */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-300" style={{ minHeight: '350px' }}>
+            <div className="bg-gray-800 rounded-lg border border-gray-700">
               <SpotVsSyntheticChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Cost of Carry Chart */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <div className="bg-gray-800 rounded-lg border border-gray-700">
               <CostOfCarryChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Calendar Spread Chart */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <div className="bg-gray-800 rounded-lg border border-gray-700">
               <CalendarSpreadChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Weekly Synthetic Short Chart */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+            <div className="bg-gray-800 rounded-lg border border-gray-700">
               <WeeklySyntheticShortChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
@@ -258,25 +283,25 @@ export default function DashboardPage() {
 
         {/* Logs Panel - Toggleable */}
         {showLogs && (
-          <div className="w-96 bg-white border-l border-gray-200 flex flex-col shadow-xl">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
+            <div className="p-4 border-b border-gray-700">
+              <h3 className="text-sm font-bold text-white flex items-center">
+                <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Activity Logs
               </h3>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {logs.map((log, i) => (
-                <div key={i} className="text-xs p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div key={i} className="text-xs p-2 bg-gray-700/50 rounded border border-gray-600">
                   <div className="flex justify-between items-start mb-1">
-                    <span className="font-mono text-gray-600">{log.time}</span>
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-semibold">
+                    <span className="font-mono text-gray-300">{log.time}</span>
+                    <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">
                       {log.type.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-gray-700 font-mono">{log.msg}</div>
+                  <div className="text-gray-200 font-mono">{log.msg}</div>
                 </div>
               ))}
             </div>
@@ -285,20 +310,20 @@ export default function DashboardPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-gray-800 to-gray-900 text-white px-8 py-4 flex-shrink-0 border-t border-gray-700">
+      <footer className="bg-gray-800 text-gray-400 px-6 py-3 flex-shrink-0 border-t border-gray-700">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-300">
-            © 2024 Professional Trading Dashboard • Real-time Market Analytics
+          <div className="text-xs">
+            © 2024 Trading Dashboard • Real-time Analytics
           </div>
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'} animate-pulse`}></div>
-              <span className="text-xs text-gray-300">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
+              <span className="text-xs">
                 {isConnected ? 'Connected' : 'Disconnected'}
               </span>
             </div>
-            <div className="text-xs text-gray-400">
-              Data Refresh: {new Date().toLocaleTimeString()}
+            <div className="text-xs">
+              {new Date().toLocaleTimeString()}
             </div>
           </div>
         </div>
@@ -323,46 +348,59 @@ export default function DashboardPage() {
         
         /* Smooth Transitions */
         .transition-all {
-          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .transition-fast {
-          transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         /* Hover Effects */
         .hover-lift {
-          transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .hover-lift:hover {
-          transform: translateY(-2px);
+          transform: translateY(-4px);
         }
         
         .hover-glow {
-          transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .hover-glow:hover {
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -6px rgba(0, 0, 0, 0.2);
         }
         
-        /* Custom Scrollbar */
+        /* Custom Scrollbar - Dark Theme */
         .scrollbar-thin::-webkit-scrollbar {
-          width: 6px;
+          width: 8px;
         }
-        .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-          background-color: #d1d5db;
-          border-radius: 3px;
+        .scrollbar-thumb-slate-600::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #475569, #334155);
+          border-radius: 4px;
+          border: 1px solid #1e293b;
         }
-        .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb:hover {
-          background-color: #9ca3af;
+        .scrollbar-thumb-slate-600::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #64748b, #475569);
         }
         .scrollbar-track-transparent::-webkit-scrollbar-track {
-          background-color: transparent;
+          background: transparent;
         }
         
-        /* Firefox scrollbar */
+        /* Firefox scrollbar - Dark Theme */
         .scrollbar-thin {
           scrollbar-width: thin;
-          scrollbar-color: #d1d5db transparent;
+          scrollbar-color: #475569 transparent;
+        }
+        
+        /* Gradient Text Animation */
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        
+        .animate-gradient {
+          background-size: 200% 200%;
+          animation: gradientShift 3s ease infinite;
         }
         
         /* Respect user's motion preference */
@@ -373,6 +411,19 @@ export default function DashboardPage() {
             animation-duration: 0.01ms !important;
             animation-iteration-count: 1 !important;
             transition-duration: 0.01ms !important;
+          }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+          .grid-cols-2 {
+            grid-template-columns: 1fr;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .grid-cols-4 {
+            grid-template-columns: 1fr 1fr;
           }
         }
       `}</style>

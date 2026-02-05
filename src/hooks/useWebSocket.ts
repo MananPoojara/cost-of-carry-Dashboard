@@ -74,8 +74,8 @@ export const useWebSocket = (url: string): UseWebSocketReturn => {
   };
   
   useEffect(() => {
-    console.log('🔄 [WebSocket] Initializing connection to:', url);
-    console.log('🔄 [WebSocket] Component mounted, initializing socket');
+    console.log('[WebSocket] Initializing connection to:', url);
+    console.log('[WebSocket] Component mounted, initializing socket');
     // Initialize socket connection
     socketRef.current = io(url, {
       transports: ['websocket', 'polling'],
@@ -89,17 +89,17 @@ export const useWebSocket = (url: string): UseWebSocketReturn => {
     
     // Connection event handlers
     socket.on('connect', () => {
-      console.log('✅ [WebSocket] Connected to WebSocket server');
-      console.log('✅ [WebSocket] Socket URL:', url);
-      console.log('✅ [WebSocket] Socket ID:', socket.id);
-      console.log('✅ [WebSocket] Connected state before:', isConnected);
+      console.log('[WebSocket] Connected to WebSocket server');
+      console.log('[WebSocket] Socket URL:', url);
+      console.log('[WebSocket] Socket ID:', socket.id);
+      console.log('[WebSocket] Connected state before:', isConnected);
       setIsConnected(true);
       setError(null);
       setLastUpdated(new Date().toISOString());
-      console.log('✅ [WebSocket] Connected state after:', true);
+      console.log('[WebSocket] Connected state after:', true);
       
       // Request current data immediately after connection
-      console.log('📤 [WebSocket] Requesting current data after connection');
+      console.log('[WebSocket] Requesting current data after connection');
       socket.emit('requestCurrentData');
       
       // Explicitly set connection status to LIVE on successful connect
@@ -119,51 +119,120 @@ export const useWebSocket = (url: string): UseWebSocketReturn => {
     });
     
     socket.on('disconnect', (reason) => {
-      console.log('❌ [WebSocket] Disconnected from WebSocket server:', reason);
-      console.log('❌ [WebSocket] Connected state before:', isConnected);
+      console.log('[WebSocket] Disconnected from WebSocket server:', reason);
+      console.log('[WebSocket] Connected state before:', isConnected);
       setIsConnected(false);
-      console.log('❌ [WebSocket] Connected state after:', false);
+      console.log('[WebSocket] Connected state after:', false);
       if (reason === 'io server disconnect') {
         socket.connect();
       }
     });
     
     socket.on('connect_error', (error: any) => {
-      console.error('❌ [WebSocket] Connection error:', error);
-      console.error('❌ [WebSocket] Error details:', error.message, error.type, error.description);
+      console.error('[WebSocket] Connection error:', error);
+      console.error('[WebSocket] Error details:', error.message, error.type, error.description);
       setIsConnected(false);
       setError(`Connection error: ${error.message}`);
     });
     
-    // Data event handlers
+    // Data validation
+    const isValidData = (data: MarketData) => {
+      // Check if we have essential data fields
+      const hasSpot = data.spot && !isNaN(data.spot) && data.spot > 0;
+      const hasTimestamp = data.timestamp && new Date(data.timestamp).toString() !== 'Invalid Date';
+      
+      // At least one synthetic value should be present
+      const hasSynthetic = (data.weeklySynthetic && !isNaN(data.weeklySynthetic)) || 
+                          (data.monthlySynthetic && !isNaN(data.monthlySynthetic));
+      
+      return hasSpot && hasTimestamp && hasSynthetic;
+    };
+    
+    // Data event handlers with debouncing to prevent excessive updates
+    let lastUpdateTime = 0;
     socket.on('marketData', (newData: MarketData) => {
-      console.log('📊 [WebSocket] Market data received:', newData);
-      console.log('📊 [WebSocket] Data keys:', Object.keys(newData));
-      console.log('📊 [WebSocket] Spot:', newData.spot, 'Weekly:', newData.weeklySynthetic);
-      console.log('📊 [WebSocket] Timestamp:', newData.timestamp);
-      console.log('📊 [WebSocket] Setting data state...');
-      setData(newData);
-      console.log('📊 [WebSocket] Data state set');
+      const now = Date.now();
+      // Debounce rapid updates - only update every 200ms to prevent excessive re-renders
+      if (now - lastUpdateTime < 200) {
+        return;
+      }
+      lastUpdateTime = now;
+      
+      console.log('[WebSocket] Market data received:', newData);
+      console.log('[WebSocket] Data keys:', Object.keys(newData));
+      console.log('[WebSocket] Spot:', newData.spot, 'Weekly:', newData.weeklySynthetic);
+      console.log('[WebSocket] Timestamp:', newData.timestamp);
+      
+      // Validate data before processing
+      if (!isValidData(newData)) {
+        console.warn('[WebSocket] Received invalid data, skipping update:', newData);
+        return;
+      }
+      
+      console.log('[WebSocket] Setting data state...');
+      setData(prevData => {
+        // Only update if the data is different to prevent unnecessary re-renders
+        if (prevData && 
+            prevData.spot === newData.spot && 
+            prevData.weeklySynthetic === newData.weeklySynthetic &&
+            prevData.monthlySynthetic === newData.monthlySynthetic &&
+            prevData.atmStrike === newData.atmStrike) {
+          return prevData;
+        }
+        return newData;
+      });
+      console.log('[WebSocket] Data state set');
       setLastUpdated(new Date().toISOString());
       setError(null);
     });
 
     socket.on('historyData', (historyData: MarketData[]) => {
-      console.log('📈 [WebSocket] History data received:', historyData.length, 'points');
+      console.log('[WebSocket] History data received:', historyData.length, 'points');
       if (historyData.length > 0) {
-        console.log('📈 [WebSocket] First point:', historyData[0]);
-        console.log('📈 [WebSocket] Last point:', historyData[historyData.length - 1]);
-        console.log('📈 [WebSocket] Last point spot:', historyData[historyData.length - 1].spot);
+        console.log('[WebSocket] First point:', historyData[0]);
+        console.log('[WebSocket] Last point:', historyData[historyData.length - 1]);
+        console.log('[WebSocket] Last point spot:', historyData[historyData.length - 1].spot);
       }
-      console.log('📈 [WebSocket] Setting history state...');
-      setHistory(historyData);
-      console.log('📈 [WebSocket] History state set');
-      if (historyData.length > 0) {
-        console.log('📈 [WebSocket] Setting latest data point...');
-        setData(historyData[historyData.length - 1]);
-        console.log('📈 [WebSocket] Latest data point set');
+      
+      // Validate history data
+      const validHistory = historyData.filter(isValidData);
+      if (validHistory.length !== historyData.length) {
+        console.warn(`[WebSocket] Filtered out ${historyData.length - validHistory.length} invalid history points`);
       }
-      console.log('📈 [WebSocket] History state should be set now');
+      
+      console.log('[WebSocket] Setting history state...');
+      setHistory(prevHistory => {
+        // Only update if the history is different to prevent unnecessary re-renders
+        if (prevHistory.length === validHistory.length) {
+          const isSame = prevHistory.every((item, index) => 
+            item.spot === validHistory[index].spot &&
+            item.weeklySynthetic === validHistory[index].weeklySynthetic &&
+            item.monthlySynthetic === validHistory[index].monthlySynthetic
+          );
+          if (isSame) {
+            return prevHistory;
+          }
+        }
+        return validHistory;
+      });
+      console.log('[WebSocket] History state set');
+      if (validHistory.length > 0) {
+        console.log('[WebSocket] Setting latest data point...');
+        setData(prevData => {
+          const latestPoint = validHistory[validHistory.length - 1];
+          // Only update if the data is different to prevent unnecessary re-renders
+          if (prevData && 
+              prevData.spot === latestPoint.spot && 
+              prevData.weeklySynthetic === latestPoint.weeklySynthetic &&
+              prevData.monthlySynthetic === latestPoint.monthlySynthetic &&
+              prevData.atmStrike === latestPoint.atmStrike) {
+            return prevData;
+          }
+          return latestPoint;
+        });
+        console.log('[WebSocket] Latest data point set');
+      }
+      console.log('[WebSocket] History state should be set now');
     });
     
     socket.on('currentData', (currentData: MarketData) => {

@@ -3,8 +3,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Chart from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
+import dynamic from 'next/dynamic';
+
+// Dynamically import Chart component to prevent SSR issues
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 interface ChartDataPoint {
     time: string;
@@ -207,13 +210,17 @@ const CostOfCarryChart: React.FC<CostOfCarryChartProps> = ({ data, history, isCo
                     <div className="text-right">
                         <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">WEEKLY</span>
                         <div className={`font-mono text-sm font-bold transition-all duration-300 ${data?.weeklyCarry && data.weeklyCarry >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                            {data?.weeklyCarry ? (data.weeklyCarry > 0 ? '+' : '') + data.weeklyCarry.toFixed(2) : '--'}
+                            {data?.weeklyCarry !== undefined && data.weeklyCarry !== null ? 
+                              (data.weeklyCarry > 0 ? '+' : '') + data.weeklyCarry.toFixed(2) : 
+                              'No data'}
                         </div>
                     </div>
                     <div className="text-right">
                         <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">MONTHLY</span>
                         <div className={`font-mono text-sm font-bold transition-all duration-300 ${data?.monthlyCarry && data.monthlyCarry >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
-                            {data?.monthlyCarry ? (data.monthlyCarry > 0 ? '+' : '') + data.monthlyCarry.toFixed(2) : '--'}
+                            {data?.monthlyCarry !== undefined && data.monthlyCarry !== null ? 
+                              (data.monthlyCarry > 0 ? '+' : '') + data.monthlyCarry.toFixed(2) : 
+                              'No data'}
                         </div>
                     </div>
                 </div>

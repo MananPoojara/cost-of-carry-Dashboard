@@ -10,7 +10,7 @@ class OptimizedDataStorage {
         this.socketServer = socketServer;
         this.tickBuffer = new Map(); // In-memory tick buffer
         this.lastStoredTime = 0;
-        this.storageInterval = 1000; // Store every 1 second
+        this.storageInterval = 500; // Store every 500ms for more frequent updates
         this.maxTickAge = 120000; // 2 minutes max age for simulated candle data
         this.atmStrikeManager = null;
         this.spreadAnalyzer = null;
@@ -108,6 +108,11 @@ class OptimizedDataStorage {
             if (now - this.lastStoredTime >= this.storageInterval) {
                 this.storeComputedData();
                 this.lastStoredTime = now;
+            }
+            
+            // Also clear stale data periodically to prevent memory buildup
+            if (now % 30000 < 100) { // Every 30 seconds
+                this.clearStaleData();
             }
         }, 100); // Check every 100ms for precision
     }
@@ -253,46 +258,36 @@ class OptimizedDataStorage {
 
         try {
             // Add connection status and market info
-            const isMarketClosed = this.getMarketStatus() !== 'OPEN';
+            const marketStatus = this.getMarketStatus();
+            const isMarketOpen = marketStatus === 'OPEN';
             let finalData = { ...syntheticData };
             
-            // When market is closed, use the last computed data without variations
-            if (isMarketClosed) {
-                // Keep the real computed values as-is
-                // No modifications needed - this is the correct behavior
-            }
-            
-            // Get data range for market closed display
-            let dataRange = null;
-            if (isMarketClosed && this.db) {
-                // In a real implementation, you would query the database for date range
-                // For now, we'll use today's date as example
-                const today = new Date();
-                const yesterday = new Date(today);
-                yesterday.setDate(yesterday.getDate() - 1);
-                dataRange = {
-                    startDate: yesterday.toISOString().split('T')[0],
-                    endDate: today.toISOString().split('T')[0]
-                };
-            }
+            // Get data range for market status display
+            const now = new Date();
+            const dataRange = {
+                startDate: now.toISOString().split('T')[0], // Today's date
+                endDate: now.toISOString().split('T')[0]
+            };
 
             const broadcastData = {
                 ...finalData,
                 timestamp: syntheticData.timestamp instanceof Date ? syntheticData.timestamp.toISOString() : syntheticData.timestamp,
                 connectionStatus: 'LIVE',
-                marketStatus: this.getMarketStatus(),
-                isMarketClosed: isMarketClosed,
+                marketStatus: marketStatus,
+                isMarketClosed: !isMarketOpen,
                 dataRange: dataRange,
                 expiries: this.atmStrikeManager?.getCurrentExpiries?.() || {},
-                lastUpdate: new Date().toISOString()
+                lastUpdate: new Date().toISOString(),
+                // Add flag to indicate this is real-time data
+                isRealTime: true
             };
 
             // Broadcast to all connected clients
             this.socketServer.emit('marketData', broadcastData);
             
-            // Log periodically
-            if (Date.now() % 10000 < 1000) {
-                console.log(`[Broadcast] Spot: ${broadcastData.spot}, Weekly Synth: ${broadcastData.weeklySynthetic}`);
+            // Log more frequently for better visibility (every 5 seconds instead of 10)
+            if (Date.now() % 5000 < 100) {
+                console.log(`[Broadcast] Market: ${marketStatus} | Spot: ${broadcastData.spot}, Weekly Synth: ${broadcastData.weeklySynthetic}, ATM Strike: ${broadcastData.atmStrike}`);
             }
 
         } catch (error) {
@@ -310,11 +305,11 @@ class OptimizedDataStorage {
         const minute = now.getMinutes();
         const currentTime = hour * 60 + minute;
 
-        // Market hours: 9:15 AM to 3:30 PM IST
-        const marketOpen = 9 * 60 + 15; // 9:15 AM
-        const marketClose = 15 * 60 + 30; // 3:30 PM
+        // Market hours: 9:00 AM to 4:00 PM IST (as per user requirement)
+        const marketOpen = 9 * 60 + 0; // 9:00 AM
+        const marketClose = 16 * 60 + 0; // 4:00 PM
 
-        if (currentTime >= marketOpen && currentTime <= marketClose) {
+        if (currentTime >= marketOpen && currentTime < marketClose) {
             return 'OPEN';
         } else if (currentTime < marketOpen) {
             return 'PRE_MARKET';

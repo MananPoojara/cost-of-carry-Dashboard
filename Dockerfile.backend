@@ -1,0 +1,36 @@
+# Multi-stage build for the backend server
+FROM node:18-alpine AS deps
+WORKDIR /app
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY backend/package*.json ./
+RUN npm ci
+COPY . .
+
+FROM node:18-alpine AS runtime
+WORKDIR /app
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Kolkata
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+USER nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/backend ./
+COPY --from=builder --chown=nextjs:nodejs /app/pyScript ./pyScript
+COPY --from=builder --chown=nextjs:nodejs /app/init-scripts ./init-scripts
+
+EXPOSE 3004
+ENV PORT=3004
+ENV HOST=0.0.0.0
+ENV DB_HOST=postgres
+ENV DB_PORT=5432
+ENV DB_NAME=cost_of_carry_db
+ENV DB_USER=postgres
+ENV DB_PASSWORD=postgres123
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD node health-check.js || exit 1
+
+CMD ["node", "server.js"]

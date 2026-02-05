@@ -1,8 +1,8 @@
-curl 'https://kite.zerodha.com/oms/instruments/historical/256265/minute?user_id=PS3609&oi=1&from=2025-12-06&to=2026-02-04' \
+curl 'https://kite.zerodha.com/oms/instruments/historical/256265/minute?user_id=PS3609&oi=1&from=2025-12-07&to=2026-02-05' \
   -H 'accept: */*' \
   -H 'accept-language: en-US,en;q=0.9' \
-  -H 'authorization: enctoken I4T6gaEINrE2MUgK90r4MEHYVZlVWFUg1CZ1wSoqYjQFskBpeHd6hMwLSZOBnghk8+mEb8eY/oMsNY2byqxT+7bMZrmbSkgTA7qds3x6ITo8KOnKTh8BHA==' \
-  -b 'kf_session=zlOTbcfHMy3RDNKj07B5jRopaGPBET81; _cfuvid=4IswEW0UnP_JIea5kjpUs1XvOLZso7YVMjm7WPdh2Jc-1770178218533-0.0.1.1-604800000; __cf_bm=dKQhaDTFxQxxH8EjbgK_MbpRy593X7vCYou8cqBdr98-1770179620-1.0.1.1-xVbY.DYZT38DmlkBGzXP04nq0UR9aeqZUiwGvuZ7Q59wgPraclt7ZJzA76jge.3adOtUXrOQaAhuNVzfS0YY8qD4TZW_6syXKjg6rFHh1eg; user_id=PS3609; public_token=A5UZu17eXdMKs5dq0TBs5HOVfzIHTROz; enctoken=I4T6gaEINrE2MUgK90r4MEHYVZlVWFUg1CZ1wSoqYjQFskBpeHd6hMwLSZOBnghk8+mEb8eY/oMsNY2byqxT+7bMZrmbSkgTA7qds3x6ITo8KOnKTh8BHA==' \
+  -H 'authorization: enctoken EhhHXh544usPNYwXNhUKeNrS7SvaEVmpjI9pgqXW5OaJu4IIjIcSxhwD5vqj8saE3M4HFt/ziFoHUqMgr9QVe55wFyaqYpdqmoC3jibExZ24VzId6A1WFA==' \
+  -b '_cfuvid=EOOfc79gGvOcUbFNHkPK.w1r5wJupQwCPuXFBRxrlpM-1770209778495-0.0.1.1-604800000; kf_session=SlMuEkxqUNornuho8sHR5f0cf5Lem23r; user_id=PS3609; public_token=Du4x2P0s3aot0Rqosd1MPLEpT2fn66zh; enctoken=EhhHXh544usPNYwXNhUKeNrS7SvaEVmpjI9pgqXW5OaJu4IIjIcSxhwD5vqj8saE3M4HFt/ziFoHUqMgr9QVe55wFyaqYpdqmoC3jibExZ24VzId6A1WFA==; __cf_bm=5BHMmEcEorQTAlw.mbDGdZPfZJA_1gWJ1B353NVVA00-1770265698-1.0.1.1-DWcER.7NY4i9RldTj3Tp50rXCzJDhkLNJVF0o0.1G8dt2Ra8v22eAvKfqPCmHRe.bhTwmyYpJSheQg1ex_JwDkzF1dBJRHXyZJfd6zQ4qEE' \
   -H 'priority: u=1, i' \
   -H 'referer: https://kite.zerodha.com/static/chart/chartiq/chart.html?v=3.6.83' \
   -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \

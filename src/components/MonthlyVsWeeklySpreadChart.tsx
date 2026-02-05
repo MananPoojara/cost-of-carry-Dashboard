@@ -104,9 +104,9 @@ const MonthlyVsWeeklySpreadChart: React.FC<MonthlyVsWeeklySpreadChartProps> = ({
                             ? 'text-[#26A641]' 
                             : 'text-[#F85149]'
                     }`}>
-                        {data?.calendarSpread !== undefined 
+                        {data?.calendarSpread !== undefined && data.calendarSpread !== null
                             ? (data.calendarSpread >= 0 ? '+' : '') + formatSpread(data.calendarSpread) 
-                            : '+12.45'}
+                            : 'No data'}
                     </div>
                 </div>
             </div>

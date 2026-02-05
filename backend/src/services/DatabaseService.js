@@ -411,10 +411,55 @@ class DatabaseService {
     }
 
     /**
-     * Get database statistics
-     * @returns {Object} Database statistics
+     * Get latest computed data for real-time dashboard
+     * @param {number} limit - Maximum records to return
+     * @returns {Array} Latest computed data with data quality validation
      */
-    async getStatistics() {
+    async getLatestComputedData(limit = 50) {
+        if (!this.isConnected) {
+            console.error('❌ Database not connected - cannot fetch computed data');
+            return [];
+        }
+
+        try {
+            const client = await this.pool.connect();
+            
+            const query = `
+                SELECT *,
+                    EXTRACT(EPOCH FROM (NOW() - calculation_timestamp)) as age_seconds
+                FROM computed_data 
+                WHERE EXTRACT(EPOCH FROM (NOW() - calculation_timestamp)) < 86400  -- Last 24 hours
+                ORDER BY calculation_timestamp DESC
+                LIMIT $1
+            `;
+            
+            const result = await client.query(query, [limit]);
+            client.release();
+
+            // Validate data quality
+            const validData = result.rows.filter(row => {
+                const hasValidSpot = row.spot_price && row.spot_price > 0;
+                const hasValidSynthetic = (row.weekly_synthetic_future || row.monthly_synthetic_future) > 0;
+                return hasValidSpot && hasValidSynthetic;
+            });
+
+            if (validData.length === 0) {
+                console.warn('⚠️  No valid computed data found in database');
+            } else {
+                const avgAge = validData.reduce((sum, row) => sum + parseFloat(row.age_seconds), 0) / validData.length;
+                console.log(`✅ Retrieved ${validData.length} valid computed data points (avg age: ${avgAge.toFixed(1)}s)`);
+            }
+
+            return validData;
+
+        } catch (error) {
+            console.error('❌ Error getting latest computed data:', error.message);
+            return [];
+        }
+    }
+
+    /**
+     * Get database statistics
         if (!this.isConnected) {
             return { error: 'Database not connected' };
         }

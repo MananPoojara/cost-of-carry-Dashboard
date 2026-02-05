@@ -3,8 +3,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Chart from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
+import dynamic from 'next/dynamic';
+
+// Dynamically import Chart component to prevent SSR issues
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 interface ChartDataPoint {
     time: string;
@@ -223,13 +226,13 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
                     <div className="text-right">
                         <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">SPOT</span>
                         <div className="font-mono text-sm font-bold text-gray-700 transition-all duration-300">
-                            {data?.spot ? formatPrice(data.spot) : '--'}
+                            {data?.spot ? formatPrice(data.spot) : 'No data'}
                         </div>
                     </div>
                     <div className="text-right">
                         <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">SYNTHETIC</span>
                         <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
-                            {data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : '--'}
+                            {data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : 'No data'}
                         </div>
                     </div>
                 </div>

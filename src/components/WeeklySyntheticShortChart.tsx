@@ -3,8 +3,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Chart from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
+import dynamic from 'next/dynamic';
+
+// Dynamically import Chart component to prevent SSR issues
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 interface ChartDataPoint {
     time: string;

@@ -3,8 +3,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Chart from 'react-apexcharts';
 import { ApexOptions } from 'apexcharts';
+import dynamic from 'next/dynamic';
+
+// Dynamically import Chart component to prevent SSR issues
+const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 interface ChartDataPoint {
     time: string;
@@ -198,13 +201,13 @@ const CalendarSpreadChart: React.FC<CalendarSpreadChartProps> = ({ data, history
                     <div className="text-right">
                         <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">MLY</span>
                         <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
-                            {data?.monthlySynthetic ? data.monthlySynthetic.toFixed(2) : '--'}
+                            {data?.monthlySynthetic ? data.monthlySynthetic.toFixed(2) : 'No data'}
                         </div>
                     </div>
                     <div className="text-right">
                         <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">WKY</span>
                         <div className="font-mono text-sm font-bold text-amber-600 transition-all duration-300">
-                            {data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : '--'}
+                            {data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : 'No data'}
                         </div>
                     </div>
                 </div>

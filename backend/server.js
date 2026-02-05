@@ -23,7 +23,7 @@ class NiftySyntheticServer {
         this.server = http.createServer(this.app);
         this.io = socketIo(this.server, {
             cors: {
-                origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"],
+                origin: "*",
                 methods: ["GET", "POST"]
             }
         });
@@ -201,47 +201,112 @@ class NiftySyntheticServer {
             console.log(`   Server initialized: ${this.isInitialized}`);
             console.log(`${'='.repeat(60)}\n`);
 
-            // Send current status and historical data to new client
+            // Send current status and appropriate data based on market hours to new client
             if (this.isInitialized) {
                 try {
-                    // Get latest 50 points from DB for initial chart population
-                    const historicalData = await this.dbService.getHistoricalComputedData(null, null, 50);
+                    const marketStatus = this.dataStorage.getMarketStatus();
+                    const isMarketOpen = marketStatus === 'OPEN';
+                    const isAfterMarketHours = marketStatus !== 'OPEN';
                     
-                    // Map DB format to broadcast format
-                    // Map DB format to broadcast format
-                    const formattedHistory = historicalData.map(d => ({
-                        spot: parseFloat(d.spot_price),
-                        weeklySynthetic: parseFloat(d.weekly_synthetic_future),
-                        monthlySynthetic: parseFloat(d.monthly_synthetic_future),
-                        weeklyCarry: parseFloat(d.weekly_cost_of_carry),
-                        monthlyCarry: parseFloat(d.monthly_cost_of_carry),
-                        calendarSpread: parseFloat(d.calendar_spread),
-                        timestamp: d.calculation_timestamp,
-                        atmStrike: parseFloat(d.atm_strike)
-                    })).reverse();
-
+                    let formattedHistory = [];
+                    let latestPoint = null;
+                    
+                    if (isMarketOpen) {
+                        // During market hours: get recent live data (last 5 minutes for more responsive data)
+                        const recentData = await this.dbService.getLatestComputedData(30);
+                        formattedHistory = recentData
+                            .filter(d => {
+                                // Only include data from today during market hours
+                                const dataTime = new Date(d.calculation_timestamp);
+                                return dataTime.toDateString() === now.toDateString();
+                            })
+                            .map(d => ({
+                                spot: parseFloat(d.spot_price),
+                                weeklySynthetic: parseFloat(d.weekly_synthetic_future),
+                                monthlySynthetic: parseFloat(d.monthly_synthetic_future),
+                                weeklyCarry: parseFloat(d.weekly_cost_of_carry),
+                                monthlyCarry: parseFloat(d.monthly_cost_of_carry),
+                                calendarSpread: parseFloat(d.calendar_spread),
+                                timestamp: d.calculation_timestamp,
+                                atmStrike: parseFloat(d.atm_strike)
+                            })).reverse();
+                        
+                        console.log(`📊 Market is OPEN - sending ${formattedHistory.length} recent data points for immediate visualization`);
+                    } else if (isAfterMarketHours) {
+                        // After market hours: get aggregated historical data for the entire day
+                        const startOfDay = new Date(now);
+                        startOfDay.setHours(0, 0, 0, 0);
+                        
+                        const endOfDay = new Date(now);
+                        endOfDay.setHours(23, 59, 59, 999);
+                        
+                        const allDayData = await this.dbService.getHistoricalComputedData(startOfDay, endOfDay, 1000);
+                        formattedHistory = allDayData.map(d => ({
+                            spot: parseFloat(d.spot_price),
+                            weeklySynthetic: parseFloat(d.weekly_synthetic_future),
+                            monthlySynthetic: parseFloat(d.monthly_synthetic_future),
+                            weeklyCarry: parseFloat(d.weekly_cost_of_carry),
+                            monthlyCarry: parseFloat(d.monthly_cost_of_carry),
+                            calendarSpread: parseFloat(d.calendar_spread),
+                            timestamp: d.calculation_timestamp,
+                            atmStrike: parseFloat(d.atm_strike)
+                        }));
+                        
+                        console.log(`📊 Market is CLOSED - sending ${formattedHistory.length} aggregated data points for the day`);
+                    }
+                    
                     // Send special 'historyData' event if we have data
                     if (formattedHistory.length > 0) {
                         socket.emit('historyData', formattedHistory);
                     } else {
-                        console.log('⚠️ No historical data available in database');
+                        console.log('⚠️ No computed data available in database - waiting for real market data');
                     }
 
-                    // Also send current state
-                    const latestPoint = formattedHistory.length > 0 ? formattedHistory[formattedHistory.length - 1] : {};
-                    const initialData = {
-                        atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
-                        expiries: this.expiryManager?.getCurrentExpiries(),
-                        connectionStatus: this.connectionManager?.getStatus(),
-                        timestamp: new Date().toISOString(),
-                        ...latestPoint
-                    };
-                    console.log(`📤 Sending initial marketData event:`, {
-                        spot: initialData.spot,
-                        weeklySynthetic: initialData.weeklySynthetic,
-                        atmStrike: initialData.atmStrike
-                    });
-                    socket.emit('marketData', initialData);
+                    // Also send current state if available
+                    if (formattedHistory.length > 0) {
+                        latestPoint = formattedHistory[formattedHistory.length - 1];
+                    }
+                    
+                    // Send current live data if market is open and we have a connection to Zerodha
+                    const zerodhaStatus = this.zerodhaService?.getStatus();
+                    if (isMarketOpen && zerodhaStatus?.isConnected) {
+                        // Send the most current live data with real-time flag
+                        const currentData = {
+                            atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
+                            expiries: this.expiryManager?.getCurrentExpiries(),
+                            connectionStatus: this.connectionManager?.getStatus(),
+                            marketStatus: isMarketOpen ? 'OPEN' : 'CLOSED',
+                            isMarketClosed: !isMarketOpen,
+                            dataRange: {
+                                startDate: now.toISOString().split('T')[0],
+                                endDate: now.toISOString().split('T')[0]
+                            },
+                            timestamp: new Date().toISOString(),
+                            // Mark as real-time for the frontend to distinguish
+                            isRealTime: true
+                        };
+                        console.log(`📤 Sending live market data during market hours`);
+                        socket.emit('marketData', currentData);
+                    } else if (latestPoint) {
+                        // Send the latest historical data point when market is closed
+                        const historicalData = {
+                            ...latestPoint,
+                            atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
+                            expiries: this.expiryManager?.getCurrentExpiries(),
+                            connectionStatus: this.connectionManager?.getStatus(),
+                            marketStatus: isMarketOpen ? 'OPEN' : 'CLOSED',
+                            isMarketClosed: !isMarketOpen,
+                            dataRange: {
+                                startDate: now.toISOString().split('T')[0],
+                                endDate: now.toISOString().split('T')[0]
+                            },
+                            timestamp: new Date().toISOString(),
+                            // Mark as historical for the frontend
+                            isRealTime: false
+                        };
+                        console.log(`📤 Sending historical market data after market hours`);
+                        socket.emit('marketData', historicalData);
+                    }
                 } catch (error) {
                     console.error('Error sending initial data to client:', error);
                 }
@@ -372,91 +437,8 @@ class NiftySyntheticServer {
     }
 
     /**
-     * Start mock data simulation (for development/testing)
+     * Start the server (removed mock data simulation - only real data from Zerodha)
      */
-    startMockDataSimulation() {
-        console.log('Starting mock data simulation...');
-
-        let spotPrice = 21400;
-        let weeklyCallPrice = 150;
-        let weeklyPutPrice = 120;
-        let monthlyCallPrice = 280;
-        let monthlyPutPrice = 245;
-
-        setInterval(() => {
-            // Simulate price movements
-            spotPrice += (Math.random() - 0.5) * 10;
-            weeklyCallPrice += (Math.random() - 0.5) * 5;
-            weeklyPutPrice += (Math.random() - 0.5) * 5;
-            monthlyCallPrice += (Math.random() - 0.5) * 8;
-            monthlyPutPrice += (Math.random() - 0.5) * 8;
-
-            // Simulate multiple tick data for all instruments
-            const mockTicks = [
-                // Spot data
-                {
-                    ExchangeInstrumentID: 'NIFTY_SPOT',
-                    LastTradedPrice: spotPrice,
-                    Volume: Math.floor(Math.random() * 100000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: spotPrice - 0.5,
-                    AskPrice: spotPrice + 0.5
-                },
-                // Weekly Call
-                {
-                    ExchangeInstrumentID: 'WEEKLY_CALL',
-                    LastTradedPrice: weeklyCallPrice,
-                    Volume: Math.floor(Math.random() * 50000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: weeklyCallPrice - 0.25,
-                    AskPrice: weeklyCallPrice + 0.25,
-                    OpenInterest: 125000,
-                    ImpliedVolatility: 18.5
-                },
-                // Weekly Put
-                {
-                    ExchangeInstrumentID: 'WEEKLY_PUT',
-                    LastTradedPrice: weeklyPutPrice,
-                    Volume: Math.floor(Math.random() * 45000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: weeklyPutPrice - 0.25,
-                    AskPrice: weeklyPutPrice + 0.25,
-                    OpenInterest: 110000,
-                    ImpliedVolatility: 19.2
-                },
-                // Monthly Call
-                {
-                    ExchangeInstrumentID: 'MONTHLY_CALL',
-                    LastTradedPrice: monthlyCallPrice,
-                    Volume: Math.floor(Math.random() * 30000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: monthlyCallPrice - 0.5,
-                    AskPrice: monthlyCallPrice + 0.5,
-                    OpenInterest: 85000,
-                    ImpliedVolatility: 16.8
-                },
-                // Monthly Put
-                {
-                    ExchangeInstrumentID: 'MONTHLY_PUT',
-                    LastTradedPrice: monthlyPutPrice,
-                    Volume: Math.floor(Math.random() * 28000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: monthlyPutPrice - 0.5,
-                    AskPrice: monthlyPutPrice + 0.5,
-                    OpenInterest: 80000,
-                    ImpliedVolatility: 17.1
-                }
-            ];
-
-            // Process all ticks through data storage
-            mockTicks.forEach(tickData => {
-                this.dataStorage?.processTick(tickData);
-            });
-
-        }, 1000); // Every second
-
-        console.log('Mock data simulation started');
-    }
 
     /**
      * Start the server
@@ -474,21 +456,21 @@ class NiftySyntheticServer {
             // Initialize all services
             await this.initializeServices();
 
-            // Start mock data simulation if Zerodha is not connected
+            // Start server with only real data
             const zerodhaStatus = this.zerodhaService?.getStatus();
-            if (process.env.NODE_ENV !== 'production' && !zerodhaStatus?.isConnected) {
-                console.log('Zerodha not connected, starting mock data simulation...');
-                this.startMockDataSimulation();
-            } else if (zerodhaStatus?.isConnected) {
+            if (zerodhaStatus?.isConnected) {
                 console.log('Zerodha connected, using real market data');
+            } else {
+                console.log('Zerodha not connected - waiting for real data connection');
             }
 
             // Start server
             const port = process.env.PORT || 3001;
-            this.server.listen(port, () => {
+            this.server.listen(port, '0.0.0.0', () => {
                 console.log(`Server running on port ${port}`);
                 console.log(`Dashboard: http://localhost:${port}`);
                 console.log(`WebSocket: ws://localhost:${port}`);
+                console.log(`Network Access: http://${require('os').networkInterfaces()['eth0']?.[0]?.address || 'YOUR_SERVER_IP'}:${port}`);
                 console.log(`Database: ${process.env.DATABASE_URL || 'postgresql://postgres:postgres123@localhost:5433/cost_of_carry_db'}`);
                 console.log('All systems operational');
             });

@@ -349,92 +349,8 @@ class CostOfCarryServer {
     }
 
     /**
-     * Start mock data simulation (for development/testing)
+     * Start the server (removed mock data simulation - only real data from Zerodha)
      */
-    startMockDataSimulation() {
-        console.log('Starting mock data simulation...');
-
-        let spotPrice = 21400;
-        let weeklyCallPrice = 150;
-        let weeklyPutPrice = 120;
-        let monthlyCallPrice = 280;
-        let monthlyPutPrice = 245;
-
-        setInterval(() => {
-            // Simulate price movements
-            spotPrice += (Math.random() - 0.5) * 10;
-            weeklyCallPrice += (Math.random() - 0.5) * 5;
-            weeklyPutPrice += (Math.random() - 0.5) * 5;
-            monthlyCallPrice += (Math.random() - 0.5) * 8;
-            monthlyPutPrice += (Math.random() - 0.5) * 8;
-
-            // Simulate multiple tick data for all instruments
-            const mockTicks = [
-                // Spot data
-                {
-                    ExchangeInstrumentID: 'NIFTY_SPOT',
-                    LastTradedPrice: spotPrice,
-                    Volume: Math.floor(Math.random() * 100000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: spotPrice - 0.5,
-                    AskPrice: spotPrice + 0.5
-                },
-                // Weekly Call
-                {
-                    ExchangeInstrumentID: 'WEEKLY_CALL',
-                    LastTradedPrice: weeklyCallPrice,
-                    Volume: Math.floor(Math.random() * 50000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: weeklyCallPrice - 0.25,
-                    AskPrice: weeklyCallPrice + 0.25,
-                    OpenInterest: 125000,
-                    ImpliedVolatility: 18.5
-                },
-                // Weekly Put
-                {
-                    ExchangeInstrumentID: 'WEEKLY_PUT',
-                    LastTradedPrice: weeklyPutPrice,
-                    Volume: Math.floor(Math.random() * 45000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: weeklyPutPrice - 0.25,
-                    AskPrice: weeklyPutPrice + 0.25,
-                    OpenInterest: 110000,
-                    ImpliedVolatility: 19.2
-                },
-                // Monthly Call
-                {
-                    ExchangeInstrumentID: 'MONTHLY_CALL',
-                    LastTradedPrice: monthlyCallPrice,
-                    Volume: Math.floor(Math.random() * 30000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: monthlyCallPrice - 0.5,
-                    AskPrice: monthlyCallPrice + 0.5,
-                    OpenInterest: 85000,
-                    ImpliedVolatility: 16.8
-                },
-                // Monthly Put
-                {
-                    ExchangeInstrumentID: 'MONTHLY_PUT',
-                    LastTradedPrice: monthlyPutPrice,
-                    Volume: Math.floor(Math.random() * 28000),
-                    ExchangeTimeStamp: Date.now(),
-                    BidPrice: monthlyPutPrice - 0.5,
-                    AskPrice: monthlyPutPrice + 0.5,
-                    OpenInterest: 80000,
-                    ImpliedVolatility: 17.1
-                }
-            ];
-
-            // Process all ticks through data storage and database
-            mockTicks.forEach(tickData => {
-                this.databaseService?.storeMarketData(tickData);
-                this.dataStorage?.processTick(tickData);
-            });
-
-        }, 1000); // Every second
-
-        console.log('Mock data simulation started');
-    }
 
     /**
      * Start the server
@@ -452,13 +368,12 @@ class CostOfCarryServer {
             // Initialize all services
             await this.initializeServices();
 
-            // Start mock data simulation only if Zerodha is not connected
+            // Start server with only real data
             const zerodhaStatus = this.zerodhaService?.getStatus();
-            if (process.env.NODE_ENV !== 'production' && !zerodhaStatus?.isConnected) {
-                console.log('Zerodha not connected, starting mock data simulation...');
-                this.startMockDataSimulation();
-            } else if (zerodhaStatus?.isConnected) {
-                console.log('Zerodha connected, using real market data');
+            if (zerodhaStatus?.isConnected) {
+                console.log('✅ Zerodha connected, using real market data');
+            } else {
+                console.log('⚠️  Zerodha not connected - waiting for real data connection');
             }
 
             // Start server

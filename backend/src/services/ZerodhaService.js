@@ -24,12 +24,12 @@ class ZerodhaService {
         this.subscribers = new Map();
         this.subscribedInstruments = new Set();
 
-        // Instrument token mapping (from Python script)
+        // Instrument token mapping 
         this.instrumentTokens = this.getInstrumentTokenMapping();
 
         // Data fetching intervals
         this.fetchInterval = null;
-        this.fetchIntervalMs = 1000; // 1 second like Python script
+        this.fetchIntervalMs = 5000; // 50 seconds
 
         // Error tracking
         this.lastError = null;
@@ -37,7 +37,7 @@ class ZerodhaService {
 
         // Request settings
         this.maxRetries = 5;
-        this.retryDelay = 1000;
+        this.retryDelay = 5000;
     }
 
     /**

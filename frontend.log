@@ -1,0 +1,97 @@
+
+> nifty-synthetic-dashboard@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1398ms
+ ○ Compiling / ...
+ ✓ Compiled / in 5.8s (662 modules)
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[Dashboard] Render - data: null history length: 0 isConnected: false
+[Dashboard] First history item: undefined
+[Dashboard] Last history item: undefined
+ HEAD / 200 in 6455ms
+ ✓ Compiled in 622ms (300 modules)
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[Dashboard] Render - data: null history length: 0 isConnected: false
+[Dashboard] First history item: undefined
+[Dashboard] Last history item: undefined
+ GET / 200 in 24ms
+ ⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1622ms
+ ⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1769ms
+   Reload env: .env.local
+   Reload env: .env.local
+ ⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1505ms
+ ⚠ Found a change in next.config.mjs. Restarting the server to apply the changes...
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1370ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.7s (662 modules)
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[Dashboard] Render - data: null history length: 0 isConnected: false
+[Dashboard] First history item: undefined
+[Dashboard] Last history item: undefined
+ GET / 200 in 3069ms
+ ✓ Compiled in 294ms (300 modules)
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 819ms (376 modules)
+ GET /favicon.ico 200 in 877ms
+ GET /favicon.ico 200 in 8ms
+ GET /favicon.ico 200 in 7ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[Dashboard] Render - data: null history length: 0 isConnected: false
+[Dashboard] First history item: undefined
+[Dashboard] Last history item: undefined
+ GET / 200 in 94ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[Dashboard] Render - data: null history length: 0 isConnected: false
+[Dashboard] First history item: undefined
+[Dashboard] Last history item: undefined
+ GET / 200 in 17ms
+ GET /favicon.ico 200 in 9ms
+ GET /favicon.ico 200 in 3ms
+ GET /favicon.ico 200 in 5ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+[Dashboard] Render - data: null history length: 0 isConnected: false
+[Dashboard] First history item: undefined
+[Dashboard] Last history item: undefined
+ GET / 200 in 19ms
+ GET /favicon.ico 200 in 4ms
+ GET /favicon.ico 200 in 4ms
+ GET /favicon.ico 200 in 4ms
+ ✓ Compiled in 317ms (630 modules)
+ ✓ Compiled in 86ms (630 modules)
+ ✓ Compiled in 99ms (630 modules)
+ ✓ Compiled in 77ms (630 modules)
