@@ -85,7 +85,7 @@ const CalendarSpreadChart: React.FC<CalendarSpreadChartProps> = ({ data, history
                 }
             },
             background: 'transparent',
-            foreColor: '#6b7280'
+            foreColor: '#94a3b8'
         },
         colors: ['#10b981', '#f59e0b'],
         stroke: {
@@ -118,7 +118,7 @@ const CalendarSpreadChart: React.FC<CalendarSpreadChartProps> = ({ data, history
             }
         },
         grid: {
-            borderColor: '#e5e7eb',
+            borderColor: '#475569',
             strokeDashArray: 3,
             xaxis: {
                 lines: {
@@ -151,7 +151,7 @@ const CalendarSpreadChart: React.FC<CalendarSpreadChartProps> = ({ data, history
             labels: {
                 formatter: (value: number) => `₹${value.toLocaleString('en-IN')}`,
                 style: {
-                    colors: ['#6b7280'],
+                    colors: ['#94a3b8'],
                     fontSize: '11px',
                     fontFamily: 'monospace',
                     fontWeight: 600
@@ -194,29 +194,34 @@ const CalendarSpreadChart: React.FC<CalendarSpreadChartProps> = ({ data, history
     ];
 
     return (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
-                <h2 className="text-sm font-bold text-gray-800 transition-all duration-300 tracking-tight">MONTHLY VS WEEKLY SYNTHETIC</h2>
-                <div className="flex space-x-3">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-amber-500/20 hover:border-slate-600">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/30">
+                <h2 className="text-sm font-bold text-slate-100 transition-all duration-300 tracking-tight uppercase flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3v-6" />
+                    </svg>
+                    Monthly vs Weekly
+                </h2>
+                <div className="flex space-x-5">
                     <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">MLY</span>
-                        <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
-                            {data?.monthlySynthetic ? data.monthlySynthetic.toFixed(2) : 'No data'}
+                        <span className="text-xs text-slate-400 uppercase font-semibold">Monthly</span>
+                        <div className="font-mono text-sm font-bold text-emerald-400">
+                            ₹{data?.monthlySynthetic ? data.monthlySynthetic.toFixed(2) : '—'}
                         </div>
                     </div>
                     <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">WKY</span>
-                        <div className="font-mono text-sm font-bold text-amber-600 transition-all duration-300">
-                            {data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : 'No data'}
+                        <span className="text-xs text-slate-400 uppercase font-semibold">Weekly</span>
+                        <div className="font-mono text-sm font-bold text-amber-400">
+                            ₹{data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : '—'}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="h-[300px] p-4">
+            <div className="h-[320px] p-4">
                 {chartData.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                        <div className="text-sm text-gray-400">Waiting for data...</div>
+                        <div className="text-sm text-slate-400">Waiting for data...</div>
                     </div>
                 ) : (
                     <Chart

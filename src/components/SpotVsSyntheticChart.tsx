@@ -108,9 +108,9 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
                 }
             },
             background: 'transparent',
-            foreColor: '#6b7280'
+            foreColor: '#94a3b8'
         },
-        colors: ['#3b82f6', '#10b981'],
+        colors: ['#06b6d4', '#10b981'],
         stroke: {
             width: 2.5,
             curve: 'smooth'
@@ -141,7 +141,7 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
             }
         },
         grid: {
-            borderColor: '#e5e7eb',
+            borderColor: '#475569',
             strokeDashArray: 3,
             xaxis: {
                 lines: {
@@ -174,7 +174,7 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
             labels: {
                 formatter: (value: number) => `₹${value.toLocaleString('en-IN')}`,
                 style: {
-                    colors: ['#6b7280'],
+                    colors: ['#94a3b8'],
                     fontSize: '11px',
                     fontFamily: 'monospace',
                     fontWeight: 600
@@ -217,31 +217,34 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
     ];
 
     return (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
-                <h2 className="text-sm font-bold text-gray-800 transition-all duration-300 tracking-tight">
-                    SPOT VS WEEKLY SYNTHETIC
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-cyan-500/20 hover:border-slate-600">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/30">
+                <h2 className="text-sm font-bold text-slate-100 transition-all duration-300 tracking-tight uppercase flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                    Spot vs Synthetic
                 </h2>
-                <div className="flex space-x-4">
+                <div className="flex space-x-5">
                     <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">SPOT</span>
-                        <div className="font-mono text-sm font-bold text-gray-700 transition-all duration-300">
-                            {data?.spot ? formatPrice(data.spot) : 'No data'}
+                        <span className="text-xs text-slate-400 uppercase font-semibold">Spot</span>
+                        <div className="font-mono text-sm font-bold text-cyan-300">
+                            ₹{data?.spot ? formatPrice(data.spot) : '—'}
                         </div>
                     </div>
                     <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">SYNTHETIC</span>
-                        <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
-                            {data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : 'No data'}
+                        <span className="text-xs text-slate-400 uppercase font-semibold">Synthetic</span>
+                        <div className="font-mono text-sm font-bold text-emerald-400">
+                            ₹{data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : '—'}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="h-[300px] p-4">
+            <div className="h-[320px] p-4">
                 {chartData.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
-                        <div className="text-sm text-gray-400">Waiting for data...</div>
+                        <div className="text-sm text-slate-400">Waiting for data...</div>
                     </div>
                 ) : (
                     <Chart

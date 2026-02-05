@@ -79,7 +79,7 @@ const MarketStatusHeader: React.FC<MarketStatusHeaderProps> = ({
             </div>
 
             {/* Main Content */}
-            <div className="relative bg-[#0f172a]/80 backdrop-blur-xl border rounded-xl p-6 mb-6 shadow-2xl">
+            <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 mb-6 shadow-2xl shadow-slate-950/50">
                 {/* Market Status Banner */}
                 <div className={`mb-6 p-4 rounded-lg border ${config.borderColor} ${config.bgColor}`}>
                     <div className="flex items-center justify-between flex-wrap gap-4">
