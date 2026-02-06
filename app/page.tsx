@@ -254,23 +254,6 @@ export default function DashboardPage() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* Loading Overlay */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 flex flex-col items-center space-y-4 border border-slate-700/50 shadow-2xl">
-              <div className="w-10 h-10 border-3 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin"></div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-white">Loading Data</h3>
-                <p className="text-sm text-slate-400 mt-2">
-                  {isConnected 
-                    ? 'Connected, loading data...' 
-                    : 'Connecting...'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-        
         {/* Charts Container */}
         <div className="flex-1 p-8 overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
