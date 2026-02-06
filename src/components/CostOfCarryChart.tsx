@@ -118,7 +118,7 @@ const CostOfCarryChart: React.FC<CostOfCarryChartProps> = ({ data, history, isCo
             }
         },
         grid: {
-            borderColor: '#e5e7eb',
+            borderColor: '#475569',
             strokeDashArray: 3,
             xaxis: {
                 lines: {
@@ -151,7 +151,7 @@ const CostOfCarryChart: React.FC<CostOfCarryChartProps> = ({ data, history, isCo
             labels: {
                 formatter: (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)} BPS`,
                 style: {
-                    colors: ['#6b7280'],
+                    colors: ['#94a3b8'],
                     fontSize: '11px',
                     fontFamily: 'monospace',
                     fontWeight: 600
@@ -203,42 +203,41 @@ const CostOfCarryChart: React.FC<CostOfCarryChartProps> = ({ data, history, isCo
     ];
 
     return (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
-                <h2 className="text-sm font-bold text-gray-800 transition-all duration-300 tracking-tight">COST OF CARRY</h2>
-                <div className="flex space-x-3">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-purple-500/20 hover:border-slate-600">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/30">
+                <h2 className="text-sm font-bold text-slate-100 transition-all duration-300 tracking-tight uppercase flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Cost of Carry
+                </h2>
+                <div className="flex space-x-5">
                     <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">WEEKLY</span>
-                        <div className={`font-mono text-sm font-bold transition-all duration-300 ${data?.weeklyCarry && data.weeklyCarry >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        <span className="text-xs text-slate-400 uppercase font-semibold">Weekly</span>
+                        <div className={`font-mono text-sm font-bold transition-all duration-300 ${data?.weeklyCarry && data.weeklyCarry >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {data?.weeklyCarry !== undefined && data.weeklyCarry !== null ? 
                               (data.weeklyCarry > 0 ? '+' : '') + data.weeklyCarry.toFixed(2) : 
-                              'No data'}
+                              '—'}
                         </div>
                     </div>
                     <div className="text-right">
-                        <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">MONTHLY</span>
-                        <div className={`font-mono text-sm font-bold transition-all duration-300 ${data?.monthlyCarry && data.monthlyCarry >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                        <span className="text-xs text-slate-400 uppercase font-semibold">Monthly</span>
+                        <div className={`font-mono text-sm font-bold transition-all duration-300 ${data?.monthlyCarry && data.monthlyCarry >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                             {data?.monthlyCarry !== undefined && data.monthlyCarry !== null ? 
                               (data.monthlyCarry > 0 ? '+' : '') + data.monthlyCarry.toFixed(2) : 
-                              'No data'}
+                              '—'}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="h-[300px] p-4">
-                {chartData.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="text-sm text-gray-400">Waiting for data...</div>
-                    </div>
-                ) : (
-                    <Chart
-                        options={chartOptions}
-                        series={series}
-                        type="area"
-                        height="100%"
-                    />
-                )}
+            <div className="h-[320px] p-4">
+                <Chart
+                    options={chartOptions}
+                    series={series}
+                    type="area"
+                    height="100%"
+                />
             </div>
         </div>
     );

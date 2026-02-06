@@ -112,7 +112,7 @@ export default function DashboardPage() {
   }, [data, history]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-900 text-white">
+    <div className="h-screen w-screen flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-50 overflow-hidden">
       
       {/* Market Status Header */}
       <MarketStatusHeader 
@@ -123,51 +123,51 @@ export default function DashboardPage() {
       />
 
       {/* Top Header Bar */}
-      <header className="bg-gray-800 px-6 py-4 flex-shrink-0 border-b border-gray-700">
+      <header className="bg-slate-900/80 backdrop-blur-md px-8 py-5 flex-shrink-0 border-b border-slate-800/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-6">
             {/* Logo/Brand */}
             <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">DASHBOARD</h1>
-                <p className="text-xs text-gray-400 font-medium">Real-time Trading Analytics</p>
+                <h1 className="text-2xl font-bold text-white tracking-tight">NIFTY Dashboard</h1>
+                <p className="text-xs text-slate-400 font-medium">Real-time Trading Analytics</p>
               </div>
             </div>
             
             {/* Status Indicators */}
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                <span className="text-xs font-medium text-gray-300">
+            <div className="flex items-center space-x-6 ml-12">
+              <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`}></div>
+                <span className="text-xs font-semibold text-slate-300">
                   {isConnected ? 'LIVE' : 'OFFLINE'}
                 </span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${data?.isMarketClosed ? 'bg-amber-500' : 'bg-blue-500'} animate-pulse`}></div>
-                <span className="text-xs font-medium text-gray-300">
+              <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50">
+                <div className={`w-2 h-2 rounded-full ${data?.isMarketClosed ? 'bg-amber-400' : 'bg-blue-400'} animate-pulse`}></div>
+                <span className="text-xs font-semibold text-slate-300">
                   {data?.isMarketClosed ? 'CLOSED' : 'OPEN'}
                 </span>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-5">
             {/* Time Display */}
-            <div className="text-sm font-mono text-gray-300">
+            <div className="text-sm font-mono text-slate-400">
               {new Date().toLocaleTimeString('en-US', { hour12: true })} IST
             </div>
             
             {/* Logs Toggle */}
             <button 
-              className="px-3 py-1.5 bg-gray-700 text-white text-xs font-medium rounded-md hover:bg-gray-600 transition-colors flex items-center space-x-1"
+              className="px-4 py-2 bg-slate-800/80 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg border border-slate-700/50 transition-all duration-200 flex items-center space-x-2 hover:border-slate-600"
               onClick={() => setShowLogs(!showLogs)}
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <span>{showLogs ? 'HIDE' : 'LOGS'}</span>
@@ -177,48 +177,76 @@ export default function DashboardPage() {
       </header>
 
       {/* Metrics Cards Row */}
-      <div className="grid grid-cols-4 gap-4 px-6 py-4 bg-gray-800 flex-shrink-0 border-b border-gray-700">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 px-8 py-6 flex-shrink-0 bg-slate-900/40">
         {/* ATM Strike */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-xs text-gray-400 uppercase mb-1">ATM STRIKE</div>
-          <div className="text-xl font-bold text-white">
-            ₹{data?.atmStrike ? data.atmStrike.toLocaleString() : 'No data'}
+        <div className="group relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600/80 transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-slate-400 uppercase font-semibold tracking-wide">ATM Strike</div>
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-white font-mono group-hover:text-cyan-300 transition-colors">
+            ₹{data?.atmStrike ? data.atmStrike.toLocaleString() : '—'}
           </div>
         </div>
 
         {/* Weekly Synthetic */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-xs text-gray-400 uppercase mb-1">WEEKLY SYNTHETIC</div>
-          <div className="text-xl font-bold text-white">
-            ₹{data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : 'No data'}
+        <div className="group relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600/80 transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-slate-400 uppercase font-semibold tracking-wide">Weekly Synthetic</div>
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" />
+              </svg>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-white font-mono group-hover:text-blue-300 transition-colors">
+            ₹{data?.weeklySynthetic ? data.weeklySynthetic.toFixed(2) : '—'}
           </div>
         </div>
 
         {/* Calendar Spread */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-xs text-gray-400 uppercase mb-1">CALENDAR SPREAD</div>
-          <div className={`text-xl font-bold ${
+        <div className="group relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600/80 transition-all duration-200 hover:shadow-lg hover:shadow-emerald-500/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-slate-400 uppercase font-semibold tracking-wide">Calendar Spread</div>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3v-6" />
+              </svg>
+            </div>
+          </div>
+          <div className={`text-2xl font-bold font-mono group-hover:text-emerald-300 transition-colors ${
             data?.calendarSpread !== undefined && data.calendarSpread !== null && data.calendarSpread >= 0 
-              ? 'text-green-500' 
-              : 'text-red-500'
+              ? 'text-emerald-400' 
+              : 'text-red-400'
           }`}>
             {data?.calendarSpread !== undefined && data.calendarSpread !== null
               ? (data.calendarSpread >= 0 ? '+' : '') + data.calendarSpread.toFixed(2)
-              : 'No data'}
+              : '—'}
           </div>
         </div>
 
         {/* Cost of Carry */}
-        <div className="bg-gray-700 rounded-lg p-4">
-          <div className="text-xs text-gray-400 uppercase mb-1">COST OF CARRY</div>
-          <div className={`text-xl font-bold ${
-            data?.weeklyCarry !== undefined && data.weeklyCarry !== null && data.weeklyCarry >= 0
-              ? 'text-green-500'
-              : 'text-red-500'
+        <div className="group relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl p-5 hover:border-slate-600/80 transition-all duration-200 hover:shadow-lg hover:shadow-purple-500/10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-slate-400 uppercase font-semibold tracking-wide">Cost of Carry</div>
+            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
+          <div className={`text-2xl font-bold font-mono group-hover:text-purple-300 transition-colors ${
+            data?.weeklyCarry !== undefined && data?.weeklyCarry !== null && data.weeklyCarry >= 0
+              ? 'text-emerald-400'
+              : 'text-red-400'
           }`}>
-            {data?.weeklyCarry !== undefined && data.weeklyCarry !== null
+            {data?.weeklyCarry !== undefined && data?.weeklyCarry !== null
               ? (data.weeklyCarry >= 0 ? '+' : '') + data.weeklyCarry.toFixed(2)
-              : 'No data'}
+              : '—'}
           </div>
         </div>
       </div>
@@ -226,44 +254,27 @@ export default function DashboardPage() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
         
-        {/* Loading Overlay */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div className="bg-gray-800 rounded-lg p-6 flex flex-col items-center space-y-4">
-              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-              <div className="text-center">
-                <h3 className="text-lg font-medium text-white">Loading Data</h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  {isConnected 
-                    ? 'Connected, loading data...' 
-                    : 'Connecting...'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-        
         {/* Charts Container */}
-        <div className="flex-1 p-4 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex-1 p-8 overflow-y-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Spot vs Synthetic Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-slate-700/50 h-[420px] overflow-hidden shadow-lg hover:border-slate-600/80 transition-all duration-200">
               <SpotVsSyntheticChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Cost of Carry Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-slate-700/50 h-[420px] overflow-hidden shadow-lg hover:border-slate-600/80 transition-all duration-200">
               <CostOfCarryChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Calendar Spread Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-slate-700/50 h-[420px] overflow-hidden shadow-lg hover:border-slate-600/80 transition-all duration-200">
               <CalendarSpreadChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
             {/* Weekly Synthetic Short Chart */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 h-[400px]">
+            <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 rounded-xl border border-slate-700/50 h-[420px] overflow-hidden shadow-lg hover:border-slate-600/80 transition-all duration-200">
               <WeeklySyntheticShortChart data={data ?? undefined} history={history} isConnected={isConnected} />
             </div>
             
@@ -272,10 +283,10 @@ export default function DashboardPage() {
 
         {/* Logs Panel - Toggleable */}
         {showLogs && (
-          <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
-            <div className="p-4 border-b border-gray-700">
+          <div className="w-96 bg-slate-900/80 backdrop-blur-md border-l border-slate-700/50 flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-slate-700/50">
               <h3 className="text-sm font-bold text-white flex items-center">
-                <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Activity Logs
@@ -283,14 +294,14 @@ export default function DashboardPage() {
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {logs.map((log, i) => (
-                <div key={i} className="text-xs p-2 bg-gray-700/50 rounded border border-gray-600">
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="font-mono text-gray-300">{log.time}</span>
-                    <span className="px-2 py-0.5 bg-gray-600 text-gray-300 text-xs rounded">
+                <div key={i} className="text-xs p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-slate-600/80 transition-colors">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-mono text-slate-400 text-xs">{log.time}</span>
+                    <span className="px-2 py-0.5 bg-slate-700/50 text-slate-300 text-xs rounded border border-slate-600/50">
                       {log.type.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-gray-200 font-mono">{log.msg}</div>
+                  <div className="text-slate-200 font-mono text-xs break-words">{log.msg}</div>
                 </div>
               ))}
             </div>
@@ -299,19 +310,19 @@ export default function DashboardPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-gray-400 px-6 py-3 flex-shrink-0 border-t border-gray-700">
+      <footer className="bg-slate-900/80 backdrop-blur-md text-slate-400 px-8 py-4 flex-shrink-0 border-t border-slate-800/50">
         <div className="flex items-center justify-between">
           <div className="text-xs">
-            © 2024 Trading Dashboard • Real-time Analytics
+            © 2025 NIFTY Trading Dashboard • Real-time Analytics Platform
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></div>
-              <span className="text-xs">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'} animate-pulse`}></div>
+              <span className="text-xs text-slate-400">
                 {isConnected ? 'Connected' : 'Disconnected'}
               </span>
             </div>
-            <div className="text-xs">
+            <div className="text-xs text-slate-500">
               {new Date().toLocaleTimeString()}
             </div>
           </div>

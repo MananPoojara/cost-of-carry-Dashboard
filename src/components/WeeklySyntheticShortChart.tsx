@@ -97,7 +97,7 @@ const WeeklySyntheticShortChart: React.FC<WeeklySyntheticShortChartProps> = ({
                 }
             },
             background: 'transparent',
-            foreColor: '#6b7280'
+            foreColor: '#94a3b8'
         },
         colors: ['#10b981'],
         stroke: {
@@ -130,7 +130,7 @@ const WeeklySyntheticShortChart: React.FC<WeeklySyntheticShortChartProps> = ({
             }
         },
         grid: {
-            borderColor: '#e5e7eb',
+            borderColor: '#475569',
             strokeDashArray: 3,
             xaxis: {
                 lines: {
@@ -163,7 +163,7 @@ const WeeklySyntheticShortChart: React.FC<WeeklySyntheticShortChartProps> = ({
             labels: {
                 formatter: (value: number) => `₹${value.toLocaleString('en-IN')}`,
                 style: {
-                    colors: ['#6b7280'],
+                    colors: ['#94a3b8'],
                     fontSize: '11px',
                     fontFamily: 'monospace',
                     fontWeight: 600
@@ -200,32 +200,29 @@ const WeeklySyntheticShortChart: React.FC<WeeklySyntheticShortChartProps> = ({
     }];
 
     return (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md">
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50">
-                <h2 className="text-sm font-bold text-gray-800 transition-all duration-300 tracking-tight">
-                    WEEKLY SYNTHETIC SHORT
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700/50 rounded-xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-emerald-500/20 hover:border-slate-600">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/30">
+                <h2 className="text-sm font-bold text-slate-100 transition-all duration-300 tracking-tight uppercase flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2z" />
+                    </svg>
+                    Weekly Synthetic Short
                 </h2>
                 <div className="text-right">
-                    <span className="text-xs text-gray-500 uppercase font-semibold transition-all duration-300">VALUE</span>
-                    <div className="font-mono text-sm font-bold text-emerald-600 transition-all duration-300">
-                        {data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : '--'}
+                    <span className="text-xs text-slate-400 uppercase font-semibold">Value</span>
+                    <div className="font-mono text-sm font-bold text-emerald-400">
+                        ₹{data?.weeklySynthetic ? formatPrice(data.weeklySynthetic) : '—'}
                     </div>
                 </div>
             </div>
 
-            <div className="h-[300px] p-4">
-                {chartData.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="text-sm text-gray-400">Waiting for data...</div>
-                    </div>
-                ) : (
-                    <Chart
-                        options={chartOptions}
-                        series={series}
-                        type="line"
-                        height="100%"
-                    />
-                )}
+            <div className="h-[320px] p-4">
+                <Chart
+                    options={chartOptions}
+                    series={series}
+                    type="line"
+                    height="100%"
+                />
             </div>
         </div>
     );
