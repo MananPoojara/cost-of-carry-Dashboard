@@ -88,8 +88,6 @@ const CostOfCarryChart: React.FC<CostOfCarryChartProps> = ({ data, history, isCo
             foreColor: '#6b7280'
         },
         colors: ['#3b82f6', '#8b5cf6'],
-            background: 'transparent',
-            foreColor: '#94a3b8'
         stroke: {
             width: 2.5,
             curve: 'smooth'
