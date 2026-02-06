@@ -242,18 +242,12 @@ const SpotVsSyntheticChart: React.FC<SpotVsSyntheticChartProps> = ({
             </div>
 
             <div className="h-[320px] p-4">
-                {chartData.length === 0 ? (
-                    <div className="flex items-center justify-center h-full">
-                        <div className="text-sm text-slate-400">Waiting for data...</div>
-                    </div>
-                ) : (
-                    <Chart
-                        options={chartOptions}
-                        series={series}
-                        type="line"
-                        height="100%"
-                    />
-                )}
+                <Chart
+                    options={chartOptions}
+                    series={series}
+                    type="line"
+                    height="100%"
+                />
             </div>
         </div>
     );
