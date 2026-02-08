@@ -77,8 +77,16 @@ class DatabaseService {
             const existingTables = result.rows.map(row => row.table_name);
             console.log('Existing tables:', existingTables);
 
-            if (existingTables.length < 3) {
-                console.log('Some tables missing - they should be created by init scripts');
+            // Add missing columns if they don't exist
+            if (existingTables.includes('computed_data')) {
+                await client.query(`
+                    DO $$ 
+                    BEGIN 
+                        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='computed_data' AND COLUMN_NAME='spread_z_score') THEN
+                            ALTER TABLE computed_data ADD COLUMN spread_z_score DOUBLE PRECISION;
+                        END IF;
+                    END $$;
+                `);
             }
 
             client.release();
@@ -179,9 +187,9 @@ class DatabaseService {
                     weekly_synthetic_future, monthly_synthetic_future,
                     weekly_cost_of_carry, monthly_cost_of_carry, calendar_spread,
                     weekly_call_premium, weekly_put_premium, monthly_call_premium, monthly_put_premium,
-                    calculation_timestamp, market_timestamp
+                    calculation_timestamp, market_timestamp, spread_z_score
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
                 )
             `;
 
@@ -208,7 +216,8 @@ class DatabaseService {
                 computedData.monthlyCallPremium,
                 computedData.monthlyPutPremium,
                 new Date(),
-                computedData.marketTimestamp || Date.now()
+                computedData.marketTimestamp || Date.now(),
+                computedData.spreadZScore?.zScore || (typeof computedData.spreadZScore === 'number' ? computedData.spreadZScore : null)
             ];
 
             await client.query(query, values);
@@ -423,7 +432,7 @@ class DatabaseService {
 
         try {
             const client = await this.pool.connect();
-            
+
             const query = `
                 SELECT *,
                     EXTRACT(EPOCH FROM (NOW() - calculation_timestamp)) as age_seconds
@@ -432,7 +441,7 @@ class DatabaseService {
                 ORDER BY calculation_timestamp DESC
                 LIMIT $1
             `;
-            
+
             const result = await client.query(query, [limit]);
             client.release();
 

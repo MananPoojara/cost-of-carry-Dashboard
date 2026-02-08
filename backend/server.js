@@ -16,6 +16,7 @@ const OptimizedDataStorage = require('./src/services/OptimizedDataStorage');
 const SpreadAnalyzer = require('./src/services/SpreadAnalyzer');
 const ConnectionManager = require('./src/services/ConnectionManager');
 const ZerodhaService = require('./src/services/ZerodhaService');
+const marketHoursManager = require('./src/services/MarketHoursManager');
 
 class NiftySyntheticServer {
     constructor() {
@@ -40,7 +41,7 @@ class NiftySyntheticServer {
         // Server state
         this.isInitialized = false;
         this.connectedClients = 0;
-        
+
         // Performance optimization - cached aggregated data
         this.cachedAggregatedData = null;
         this.lastAggregationTime = 0;
@@ -230,10 +231,10 @@ class NiftySyntheticServer {
                     const zerodhaMarketStatus = this.zerodhaService?.getMarketStatus();
                     const isMarketOpen = zerodhaMarketStatus?.isOpen || false;
                     const isAfterMarketHours = !isMarketOpen;
-                    
+
                     let formattedHistory = [];
                     let latestPoint = null;
-                    
+
                     if (isMarketOpen) {
                         // During market hours: get recent live data (last 5 minutes for more responsive data)
                         const recentData = await this.dbService.getLatestComputedData(30);
@@ -253,12 +254,12 @@ class NiftySyntheticServer {
                                 timestamp: d.calculation_timestamp,
                                 atmStrike: parseFloat(d.atm_strike)
                             })).reverse();
-                        
+
                         console.log(`📊 Market is OPEN - sending ${formattedHistory.length} recent data points for immediate visualization`);
                     } else if (isAfterMarketHours) {
                         // After market hours: get cached aggregated data for performance
                         const aggregatedData = await this.getCachedAggregatedData();
-                        
+
                         formattedHistory = aggregatedData.map(d => ({
                             spot: parseFloat(d.spot_price),
                             weeklySynthetic: parseFloat(d.weekly_synthetic_future),
@@ -269,10 +270,10 @@ class NiftySyntheticServer {
                             timestamp: d.calculation_timestamp,
                             atmStrike: parseFloat(d.atm_strike)
                         }));
-                        
+
                         console.log(`📊 Market is CLOSED - sending ${formattedHistory.length} CACHED aggregated data points`);
                     }
-                    
+
                     // Send special 'historyData' event if we have data
                     if (formattedHistory.length > 0) {
                         socket.emit('historyData', formattedHistory);
@@ -284,7 +285,7 @@ class NiftySyntheticServer {
                     if (formattedHistory.length > 0) {
                         latestPoint = formattedHistory[formattedHistory.length - 1];
                     }
-                    
+
                     // Send current live data if market is open and we have a connection to Zerodha
                     const zerodhaStatus = this.zerodhaService?.getStatus();
                     if (isMarketOpen && zerodhaStatus?.isConnected) {
@@ -293,14 +294,14 @@ class NiftySyntheticServer {
                             atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
                             expiries: this.expiryManager?.getCurrentExpiries(),
                             connectionStatus: this.connectionManager?.getStatus(),
-                            marketStatus: isMarketOpen ? 'OPEN' : 'CLOSED',
+                            marketStatus: marketHoursManager.getMarketStatus().status,
+                            marketDescription: marketHoursManager.getMarketStatus().description,
                             isMarketClosed: !isMarketOpen,
                             dataRange: {
                                 startDate: now.toISOString().split('T')[0],
                                 endDate: now.toISOString().split('T')[0]
                             },
                             timestamp: new Date().toISOString(),
-                            // Mark as real-time for the frontend to distinguish
                             isRealTime: true
                         };
                         console.log(`📤 Sending live market data during market hours`);
@@ -312,14 +313,14 @@ class NiftySyntheticServer {
                             atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
                             expiries: this.expiryManager?.getCurrentExpiries(),
                             connectionStatus: this.connectionManager?.getStatus(),
-                            marketStatus: isMarketOpen ? 'OPEN' : 'CLOSED',
+                            marketStatus: marketHoursManager.getMarketStatus().status,
+                            marketDescription: marketHoursManager.getMarketStatus().description,
                             isMarketClosed: !isMarketOpen,
                             dataRange: {
                                 startDate: now.toISOString().split('T')[0],
                                 endDate: now.toISOString().split('T')[0]
                             },
                             timestamp: new Date().toISOString(),
-                            // Mark as historical for the frontend
                             isRealTime: false
                         };
                         console.log(`📤 Sending historical market data after market hours`);
@@ -393,7 +394,7 @@ class NiftySyntheticServer {
             // Initialize Zerodha Service
             this.zerodhaService = new ZerodhaService(this.dbService);
             const zerodhaInitialized = await this.zerodhaService.initialize();
-            
+
             if (zerodhaInitialized) {
                 console.log('Zerodha Service initialized and connected');
             } else {
@@ -505,22 +506,22 @@ class NiftySyntheticServer {
      */
     async getCachedAggregatedData() {
         const now = Date.now();
-        
+
         // Return cached data if still valid (5 minutes cache)
         if (this.cachedAggregatedData && (now - this.lastAggregationTime) < this.aggregationCacheTimeout) {
             console.log(`📊 Using cached aggregated data (${this.cachedAggregatedData.length} points)`);
             return this.cachedAggregatedData;
         }
-        
+
         // Fetch fresh data and aggregate
         console.log('📈 Generating fresh aggregated data...');
         const allHistoricalData = await this.dbService.getHistoricalComputedData(null, null, 50000);
         const aggregatedData = this.aggregateDataForChart(allHistoricalData);
-        
+
         // Cache the results
         this.cachedAggregatedData = aggregatedData;
         this.lastAggregationTime = now;
-        
+
         console.log(`📊 Fresh aggregation complete: ${aggregatedData.length} points cached`);
         return aggregatedData;
     }
@@ -530,25 +531,25 @@ class NiftySyntheticServer {
      */
     aggregateDataForChart(rawData) {
         if (!rawData || rawData.length === 0) return [];
-        
+
         // Sort by timestamp
-        const sortedData = rawData.sort((a, b) => 
+        const sortedData = rawData.sort((a, b) =>
             new Date(a.calculation_timestamp) - new Date(b.calculation_timestamp)
         );
-        
+
         // Determine optimal number of points (aim for 500-1000 points for good visualization)
         const targetPoints = 800;
         const totalPoints = sortedData.length;
         const bucketSize = Math.max(1, Math.floor(totalPoints / targetPoints));
-        
+
         console.log(`📈 Aggregating ${totalPoints} data points into buckets of ${bucketSize} (target: ${targetPoints} points)`);
-        
+
         const aggregated = [];
-        
+
         for (let i = 0; i < totalPoints; i += bucketSize) {
             const bucket = sortedData.slice(i, i + bucketSize);
             if (bucket.length === 0) continue;
-            
+
             // Calculate averages for the bucket
             const avgSpot = bucket.reduce((sum, d) => sum + parseFloat(d.spot_price || 0), 0) / bucket.length;
             const avgWeeklySynthetic = bucket.reduce((sum, d) => sum + parseFloat(d.weekly_synthetic_future || 0), 0) / bucket.length;
@@ -557,10 +558,10 @@ class NiftySyntheticServer {
             const avgMonthlyCarry = bucket.reduce((sum, d) => sum + parseFloat(d.monthly_cost_of_carry || 0), 0) / bucket.length;
             const avgCalendarSpread = bucket.reduce((sum, d) => sum + parseFloat(d.calendar_spread || 0), 0) / bucket.length;
             const avgAtmStrike = bucket.reduce((sum, d) => sum + parseFloat(d.atm_strike || 0), 0) / bucket.length;
-            
+
             // Use the timestamp from the first item in the bucket
             const timestamp = bucket[0].calculation_timestamp;
-            
+
             aggregated.push({
                 spot_price: avgSpot,
                 weekly_synthetic_future: avgWeeklySynthetic,
@@ -572,7 +573,7 @@ class NiftySyntheticServer {
                 calculation_timestamp: timestamp
             });
         }
-        
+
         console.log(`📊 Aggregated data: ${aggregated.length} points (reduced from ${totalPoints})`);
         return aggregated;
     }

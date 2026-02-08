@@ -1,8 +1,4 @@
-/**
- * Optimized Data Storage - Critical Production Component
- * Handles tick throttling and optimized database storage
- * Prevents database explosion from raw tick data (99% size reduction)
- */
+const marketHoursManager = require('./MarketHoursManager');
 
 class OptimizedDataStorage {
     constructor(db, socketServer) {
@@ -46,7 +42,7 @@ class OptimizedDataStorage {
      */
     processTick(tickData) {
         let instrumentId = tickData.ExchangeInstrumentID;
-        
+
         // Apply mapping if exists
         if (this.instrumentMap.has(instrumentId)) {
             instrumentId = this.instrumentMap.get(instrumentId);
@@ -72,23 +68,20 @@ class OptimizedDataStorage {
             this.atmStrikeManager.checkATMStrike(tickData.LastTradedPrice);
         }
 
-        // Compute synthetic immediately for real-time display
+        // Compute synthetic immediately for real-time display and storage
         const syntheticData = this.computeSynthetic();
 
         if (syntheticData) {
-            // Broadcast to frontend immediately (real-time)
-            this.broadcastToFrontend(syntheticData);
-            
+            // Check for ATM strike changes
+            if (this.atmStrikeManager && syntheticData.spot) {
+                this.atmStrikeManager.checkATMStrike(syntheticData.spot);
+            }
+
             // Log legs every 10 seconds
             if (Date.now() % 10000 < 500) {
                 const weeklyCall = this.tickBuffer.get('WEEKLY_CALL');
                 const weeklyPut = this.tickBuffer.get('WEEKLY_PUT');
                 console.log(`[DataStorage] Spot: ${syntheticData.spot}, WKL_C: ${weeklyCall?.price}, WKL_P: ${weeklyPut?.price}, Strike: ${syntheticData.atmStrike}`);
-            }
-
-            // Check for ATM strike changes
-            if (this.atmStrikeManager && syntheticData.spot) {
-                this.atmStrikeManager.checkATMStrike(syntheticData.spot);
             }
         }
     }
@@ -109,7 +102,7 @@ class OptimizedDataStorage {
                 this.storeComputedData();
                 this.lastStoredTime = now;
             }
-            
+
             // Also clear stale data periodically to prevent memory buildup
             if (now % 30000 < 100) { // Every 30 seconds
                 this.clearStaleData();
@@ -149,6 +142,9 @@ class OptimizedDataStorage {
                 marketStatus: this.getMarketStatus(),
                 dataQuality: this.assessDataQuality()
             };
+
+            // Broadcast to frontend - throttled by storageInterval (e.g. 500ms or 1s)
+            this.broadcastToFrontend(syntheticData);
 
             // Single insert per second instead of multiple per second
             await this.db.storeComputedData(dataToStore);
@@ -192,6 +188,10 @@ class OptimizedDataStorage {
             return null; // Need ATM strike for calculations
         }
 
+        const expiries = this.atmStrikeManager?.zerodhaService?.expiryManager?.getCurrentExpiries() || {};
+        const weeklyDays = this.atmStrikeManager?.zerodhaService?.expiryManager?.getDaysToExpiry(expiries.weekly);
+        const monthlyDays = this.atmStrikeManager?.zerodhaService?.expiryManager?.getDaysToExpiry(expiries.monthly);
+
         const result = {
             spot: spotData.price,
             timestamp: new Date(),
@@ -202,14 +202,24 @@ class OptimizedDataStorage {
         if (hasWeeklyData) {
             result.weeklySynthetic = weeklyCall.price - weeklyPut.price + atmStrike;
             result.weeklyCarry = result.weeklySynthetic - spotData.price;
-            result.weeklyPremium = ((result.weeklySynthetic - spotData.price) / spotData.price) * 100;
+            // Annualized Carry = (Carry / Spot) * (365 / Days) * 100
+            if (weeklyDays) {
+                result.weeklyPremium = (result.weeklyCarry / spotData.price) * (365 / weeklyDays) * 100;
+            } else {
+                result.weeklyPremium = ((result.weeklySynthetic - spotData.price) / spotData.price) * 100;
+            }
         }
 
         // Calculate monthly synthetic if data is fresh
         if (hasMonthlyData) {
             result.monthlySynthetic = monthlyCall.price - monthlyPut.price + atmStrike;
             result.monthlyCarry = result.monthlySynthetic - spotData.price;
-            result.monthlyPremium = ((result.monthlySynthetic - spotData.price) / spotData.price) * 100;
+            // Annualized Carry
+            if (monthlyDays) {
+                result.monthlyPremium = (result.monthlyCarry / spotData.price) * (365 / monthlyDays) * 100;
+            } else {
+                result.monthlyPremium = ((result.monthlySynthetic - spotData.price) / spotData.price) * 100;
+            }
         }
 
         // Calculate calendar spread if both are available
@@ -261,7 +271,7 @@ class OptimizedDataStorage {
             const marketStatus = this.getMarketStatus();
             const isMarketOpen = marketStatus === 'OPEN';
             let finalData = { ...syntheticData };
-            
+
             // Get data range for market status display
             const now = new Date();
             const dataRange = {
@@ -269,12 +279,15 @@ class OptimizedDataStorage {
                 endDate: now.toISOString().split('T')[0]
             };
 
+            const marketStatusInfo = marketHoursManager.getMarketStatus();
+
             const broadcastData = {
                 ...finalData,
                 timestamp: syntheticData.timestamp instanceof Date ? syntheticData.timestamp.toISOString() : syntheticData.timestamp,
                 connectionStatus: 'LIVE',
-                marketStatus: marketStatus,
-                isMarketClosed: !isMarketOpen,
+                marketStatus: marketStatusInfo.status,
+                marketDescription: marketStatusInfo.description,
+                isMarketClosed: !marketStatusInfo.isOpen,
                 dataRange: dataRange,
                 expiries: this.atmStrikeManager?.getCurrentExpiries?.() || {},
                 lastUpdate: new Date().toISOString(),
@@ -284,7 +297,7 @@ class OptimizedDataStorage {
 
             // Broadcast to all connected clients
             this.socketServer.emit('marketData', broadcastData);
-            
+
             // Log more frequently for better visibility (every 5 seconds instead of 10)
             if (Date.now() % 5000 < 100) {
                 console.log(`[Broadcast] Market: ${marketStatus} | Spot: ${broadcastData.spot}, Weekly Synth: ${broadcastData.weeklySynthetic}, ATM Strike: ${broadcastData.atmStrike}`);
@@ -300,22 +313,7 @@ class OptimizedDataStorage {
      * @returns {string} Market status
      */
     getMarketStatus() {
-        const now = new Date();
-        const hour = now.getHours();
-        const minute = now.getMinutes();
-        const currentTime = hour * 60 + minute;
-
-        // Market hours: 9:15 AM to 3:30 PM IST
-        const marketOpen = 9 * 60 + 15;  // 9:15 AM
-        const marketClose = 15 * 60 + 30; // 3:30 PM
-
-        if (currentTime >= marketOpen && currentTime < marketClose) {
-            return 'OPEN';
-        } else if (currentTime < marketOpen) {
-            return 'PRE_MARKET';
-        } else {
-            return 'CLOSED';
-        }
+        return marketHoursManager.getMarketStatus().status;
     }
 
     /**

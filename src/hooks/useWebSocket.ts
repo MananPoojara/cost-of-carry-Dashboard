@@ -23,6 +23,7 @@ interface MarketData {
   };
   connectionStatus: string;
   marketStatus: string;
+  marketDescription?: string;
   isMarketClosed?: boolean;
   dataRange?: {
     startDate: string;

@@ -17,6 +17,7 @@ const SpreadAnalyzer = require('./src/services/SpreadAnalyzer');
 const ConnectionManager = require('./src/services/ConnectionManager');
 const ZerodhaService = require('./src/services/ZerodhaService');
 const DatabaseService = require('./src/services/DatabaseService');
+const marketHoursManager = require('./src/services/MarketHoursManager');
 
 class CostOfCarryServer {
     constructor() {
@@ -227,13 +228,37 @@ class CostOfCarryServer {
             this.connectedClients++;
             console.log(`Client connected. Total clients: ${this.connectedClients}`);
 
-            // Send current status to new client
+            // Send current status and latest data to new client
             if (this.isInitialized) {
-                socket.emit('marketData', {
-                    atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
-                    expiries: this.expiryManager?.getCurrentExpiries(),
-                    connectionStatus: this.zerodhaService?.getStatus(),
-                    timestamp: new Date().toISOString()
+                // Fetch latest computed data from DB to show immediately (even if market closed)
+                this.databaseService.getLatestComputedData(1).then(latestData => {
+                    let initialData = {
+                        atmStrike: this.atmStrikeManager?.getCurrentATMStrike(),
+                        expiries: this.expiryManager?.getCurrentExpiries(),
+                        connectionStatus: this.zerodhaService?.getStatus(),
+                        timestamp: new Date().toISOString(),
+                        marketStatus: marketHoursManager.getMarketStatus().status,
+                        marketDescription: marketHoursManager.getMarketStatus().description
+                    };
+
+                    if (latestData && latestData.length > 0) {
+                        const d = latestData[0];
+                        initialData = {
+                            ...initialData,
+                            spot: d.spot_price,
+                            weeklySynthetic: d.weekly_synthetic_future,
+                            monthlySynthetic: d.monthly_synthetic_future,
+                            weeklyCarry: d.weekly_cost_of_carry,
+                            monthlyCarry: d.monthly_cost_of_carry,
+                            calendarSpread: d.calendar_spread,
+                            weeklyPremium: d.weekly_call_premium,
+                            monthlyPremium: d.monthly_put_premium,
+                            spreadZScore: d.spread_z_score, // Assuming field name mapping
+                            isHistorical: true // Flag to indicate this is not a live tick but last state
+                        };
+                    }
+
+                    socket.emit('marketData', initialData);
                 });
             }
 

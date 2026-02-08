@@ -7,6 +7,7 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
+const marketHoursManager = require('./MarketHoursManager');
 
 class ZerodhaService {
     constructor(db) {
@@ -71,7 +72,7 @@ class ZerodhaService {
             this.isConnected = true;
             this.isAuthenticated = true;
             this.connectionState = 'CONNECTED';
-            
+
             // Initialize market hours status
             this.isMarketHours = this.isMarketOpen();
             this.startMarketHoursMonitoring();
@@ -126,14 +127,14 @@ class ZerodhaService {
                 console.error('Could not find kite-curl-request.txt in any expected location');
                 return false;
             }
-            
+
             console.log(`Loading connection constants from: ${curlFilePath}`);
             const curlContent = await fs.readFile(curlFilePath, 'utf8');
 
             // Robust curl parsing similar to Python's shlex.split
             // Remove backslashes and newlines
             const curlCommand = curlContent.replace(/\\\n/g, ' ').replace(/\n/g, ' ').trim();
-            
+
             // Regex to match words, single-quoted strings, or double-quoted strings
             const parts = curlCommand.match(/[^\s'"]+|'([^']*)'|"([^"]*)"/g).map(p => {
                 if (p.startsWith("'") && p.endsWith("'")) return p.slice(1, -1);
@@ -143,12 +144,12 @@ class ZerodhaService {
 
             let requestUrl = '';
             const headers = {};
-            
+
             for (let i = 0; i < parts.length; i++) {
                 if (parts[i] === 'curl') {
-                    requestUrl = parts[i+1];
+                    requestUrl = parts[i + 1];
                 } else if (parts[i] === '-H' || parts[i] === '--header') {
-                    const headerLine = parts[i+1];
+                    const headerLine = parts[i + 1];
                     const colonIndex = headerLine.indexOf(':');
                     if (colonIndex > 0) {
                         const key = headerLine.substring(0, colonIndex).trim();
@@ -169,7 +170,7 @@ class ZerodhaService {
             const domain = urlRest.substring(0, firstSlashIndex);
             const requestConnection = urlRest.substring(firstSlashIndex); // Starts with /
             const baseUrlPath = requestConnection.split('&', 1)[0];
-            
+
             this.kiteDomain = domain;
             this.requestConnectionList = baseUrlPath.split('/');
             this.headerParams = headers;
@@ -198,9 +199,9 @@ class ZerodhaService {
             // Use NIFTY spot token 256265 for testing
             const testToken = '256265';
             const today = new Date().toISOString().split('T')[0];
-            
+
             const results = await this.fetchInstrumentData(testToken, new Date(today), new Date(today));
-            
+
             if (results && results.length >= 0) {
                 console.log('Connection test successful');
                 return true;
@@ -224,7 +225,7 @@ class ZerodhaService {
     async fetchInstrumentData(instrumentToken, fromDate, toDate) {
         try {
             const pathParts = [...this.requestConnectionList];
-            
+
             // Match Python logic: if ( requestConnectionList[4].isdigit() ):
             if (pathParts[4] && /^\d+$/.test(pathParts[4])) {
                 pathParts[4] = instrumentToken;
@@ -327,7 +328,7 @@ class ZerodhaService {
                     this.stopRealTimeDataFetch();
                     return;
                 }
-                
+
                 await this.fetchCurrentMarketData();
             } catch (error) {
                 console.error('Error in real-time data fetch:', error.message);
@@ -391,7 +392,7 @@ class ZerodhaService {
 
                     // Notify subscribers
                     this.notifySubscribers(processedData);
-                    
+
                     // Emit for anyone listening to the service instance
                     if (this.onDataCallback) {
                         this.onDataCallback(processedData);
@@ -421,16 +422,7 @@ class ZerodhaService {
      * @returns {boolean} True if market is open
      */
     isMarketOpen() {
-        const now = new Date();
-        const hour = now.getHours();
-        const minute = now.getMinutes();
-        const currentTime = hour * 60 + minute;
-        
-        // Market hours: 9:15 AM to 3:30 PM IST
-        const marketOpen = 9 * 60 + 15;  // 9:15 AM
-        const marketClose = 15 * 60 + 30; // 3:30 PM
-        
-        return currentTime >= marketOpen && currentTime < marketClose;
+        return marketHoursManager.isMarketOpen();
     }
 
     /**
@@ -441,7 +433,7 @@ class ZerodhaService {
         this.marketCheckInterval = setInterval(() => {
             const wasMarketOpen = this.isMarketHours;
             this.isMarketHours = this.isMarketOpen();
-            
+
             if (wasMarketOpen && !this.isMarketHours) {
                 console.log('Market has closed - stopping Zerodha API requests');
                 this.stopRealTimeDataFetch();
@@ -452,7 +444,7 @@ class ZerodhaService {
                 }
             }
         }, 60000); // Check every minute
-        
+
         console.log('Market hours monitoring started');
     }
 
@@ -472,8 +464,11 @@ class ZerodhaService {
      * @returns {Object} Market status information
      */
     getMarketStatus() {
+        const status = marketHoursManager.getMarketStatus();
         return {
-            isOpen: this.isMarketOpen(),
+            isOpen: status.isOpen,
+            status: status.status,
+            description: status.description,
             isMarketHours: this.isMarketHours,
             timestamp: new Date().toISOString()
         };
@@ -491,7 +486,7 @@ class ZerodhaService {
             try {
                 // Try exact match on trading_symbol
                 let result = await client.query('SELECT * FROM instruments WHERE trading_symbol = $1', [instrumentName]);
-                
+
                 if (result.rows.length === 0) {
                     // Try parsing NIFTY_STRIKE_TYPE_EXPIRY format
                     const matches = instrumentName.match(/NIFTY_(\d+)_([CP]E)_(WEEKLY|MONTHLY)/);
@@ -499,12 +494,12 @@ class ZerodhaService {
                         const strike = parseFloat(matches[1]);
                         const optionType = matches[2];
                         const isWeekly = matches[3] === 'WEEKLY';
-                        
+
                         // Find matching instrument in DB
                         // For WEEKLY: Find nearest expiry
                         // For MONTHLY: Find expiry at end of month
                         const now = new Date();
-                        
+
                         let query = `
                             SELECT * FROM instruments 
                             WHERE name = 'NIFTY' 
@@ -512,7 +507,7 @@ class ZerodhaService {
                             AND instrument_type = $2 
                             AND expiry_date >= $3
                         `;
-                        
+
                         if (isWeekly) {
                             query += ` ORDER BY expiry_date ASC LIMIT 1`;
                         } else {
@@ -520,9 +515,9 @@ class ZerodhaService {
                             // We look for the one furthest in the current/next month that matches the pattern
                             query += ` ORDER BY expiry_date ASC OFFSET 3 LIMIT 1`; // Rough heuristic for monthly
                         }
-                        
+
                         result = await client.query(query, [strike, optionType, now]);
-                        
+
                         // If no result for monthly heuristic, just take the next available
                         if (result.rows.length === 0 && !isWeekly) {
                             result = await client.query(`
@@ -575,14 +570,14 @@ class ZerodhaService {
                 console.log(`Updating ${exchange} instruments...`);
                 const url = `https://api.kite.trade/instruments/${exchange}`;
                 const response = await axios.get(url);
-                
+
                 if (response.status === 200 && response.data) {
                     const csvData = response.data;
                     const instruments = this.parseCSVInstruments(csvData, exchange);
-                    
+
                     // Store in DB
                     await this.storeInstrumentsInDB(instruments);
-                    
+
                     tickersByExchange[exchange] = instruments.map(i => i.tradingsymbol);
                     console.log(`${exchange}: Processed ${instruments.length} instruments`);
                 }
@@ -635,7 +630,7 @@ class ZerodhaService {
         const result = [];
         let current = '';
         let inQuotes = false;
-        
+
         for (let i = 0; i < line.length; i++) {
             const char = line[i];
             if (char === '"') {
@@ -660,7 +655,7 @@ class ZerodhaService {
         const client = await this.db.pool.connect();
         try {
             await client.query('BEGIN');
-            
+
             for (const inst of instruments) {
                 const query = `
                     INSERT INTO instruments (
@@ -676,7 +671,7 @@ class ZerodhaService {
                         lot_size = EXCLUDED.lot_size,
                         updated_at = CURRENT_TIMESTAMP
                 `;
-                
+
                 await client.query(query, [
                     inst.instrument_token,
                     inst.tradingsymbol,
@@ -690,7 +685,7 @@ class ZerodhaService {
                     inst.tick_size
                 ]);
             }
-            
+
             await client.query('COMMIT');
         } catch (error) {
             await client.query('ROLLBACK');
@@ -720,12 +715,12 @@ class ZerodhaService {
 
             for (const inst of instruments) {
                 const candles = await this.fetchInstrumentData(inst.instrument_token, fromDate, toDate);
-                
+
                 if (candles.length > 0) {
                     await this.storeMarketDataInDB(inst, candles);
                     console.log(`Stored ${candles.length} records for ${inst.trading_symbol}`);
                 }
-                
+
                 // Add delay to avoid rate limiting
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
@@ -743,7 +738,7 @@ class ZerodhaService {
         const client = await this.db.pool.connect();
         try {
             await client.query('BEGIN');
-            
+
             for (const candle of candles) {
                 const query = `
                     INSERT INTO market_data (
@@ -753,9 +748,9 @@ class ZerodhaService {
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     ON CONFLICT (instrument_token, server_timestamp) DO NOTHING
                 `;
-                
+
                 const timestamp = new Date(candle.DateTime);
-                
+
                 await client.query(query, [
                     instrument.instrument_token,
                     instrument.trading_symbol,
@@ -773,7 +768,7 @@ class ZerodhaService {
                     timestamp
                 ]);
             }
-            
+
             await client.query('COMMIT');
         } catch (error) {
             await client.query('ROLLBACK');

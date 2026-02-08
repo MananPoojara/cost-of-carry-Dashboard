@@ -135,8 +135,21 @@ class ExpiryManager {
      */
     getMarketCloseTime(date) {
         const marketClose = new Date(date);
-        marketClose.setHours(15, 30, 0, 0); // 3:30 PM
+        marketClose.setHours(15, 40, 0, 0); // 3:40 PM
         return marketClose;
+    }
+
+    /**
+     * Get days to expiry
+     * @param {Date} expiryDate - Expiry date
+     * @returns {number} Days to expiry
+     */
+    getDaysToExpiry(expiryDate) {
+        if (!expiryDate) return null;
+        const now = new Date();
+        const diffTime = expiryDate.getTime() - now.getTime();
+        const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+        return diffDays;
     }
 
     /**
